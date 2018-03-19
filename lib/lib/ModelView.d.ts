@@ -8,7 +8,7 @@ export interface ModelViewProps {
      * @type {HTMLElement}
      */
     mountNode: HTMLElement;
-    childrenElement: HTMLElement;
+    onClickBackButton?: React.ReactEventHandler<HTMLButtonElement>;
 }
 /**
  * Modal image viewer. Full page.
@@ -16,5 +16,19 @@ export interface ModelViewProps {
  * @class
  */
 export default class ModelView extends React.PureComponent<ModelViewProps> {
+    animationRequest: number;
+    bgElement: HTMLSpanElement;
+    state: {
+        fadeInCurrent: number;
+        hasShow: boolean;
+        display: boolean;
+    };
+    beginFadeInAnimation: () => void;
+    beginFadeOutAnimation: () => void;
+    componentDidMount(): void;
+    componentWillUnmount(): void;
+    componentWillReceiveProps(nextProps: {
+        children: React.ReactNode;
+    } & ModelViewProps): void;
     render(): React.ReactPortal;
 }

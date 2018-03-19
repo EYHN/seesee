@@ -1,0 +1,1 @@
+{"version":3,"file":"SvgIcon.js","sourceRoot":"","sources":["../../../src/Components/Icons/SvgIcon.tsx"],"names":[],"mappings":";;AAAA,+BAA+B;AAC/B,yCAAiC;AAIjC,MAAM,YAAY,GAAG;IACnB,OAAO,EAAE,WAAW;IACpB,KAAK,EAAE,SAAS;IAChB,MAAM,EAAE,MAAM;CACf,CAAC;AAEF,MAAM,OAAO,GAAG,CAAC,KAAoB,EAAE,EAAE,CAAC,CACxC,+DAGS,YAAY,EACZ,KAAK,GAGZ,CACH,CAAC;AAEF,kBAAe,gBAAI,CAAC,OAAO,CAAC,CAAC"}

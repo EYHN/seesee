@@ -1,9 +1,9 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import { lerp, easeOutQuad, easeInQuad } from '../utils/easing';
 
 export interface OverdriveProps {
   id: string;
-  element?: string;
   /**
    * The event of animation end.
    */
@@ -17,6 +17,10 @@ export interface OverdriveProps {
    * Delay milliseconds before the animation.
    */
   animationDelay?: number;
+  /**
+   * Prevent browsers from scrolling.
+   */
+  lockscroll?: boolean;
 }
 
 export interface OverdrivePosition {
@@ -33,15 +37,15 @@ export interface OverdrivePosition {
 const renderSubtreeIntoContainer = ReactDOM.unstable_renderSubtreeIntoContainer;
 const components: { [id: string]: { prevPosition: OverdrivePosition; prevElement: React.ReactElement<any> } } = {};
 
-export default class Overdrive extends React.Component<OverdriveProps> {
+export default class Overdrive extends React.PureComponent<OverdriveProps> {
 
   state = {
     loading: true
   };
 
   bodyElement: HTMLDivElement;
-  animationTimeout: number;
   animationDelayTimeout: number;
+  animationRequest: number;
   element: HTMLElement;
   onShowLock: boolean;
 
@@ -50,11 +54,10 @@ export default class Overdrive extends React.Component<OverdriveProps> {
   }
 
   animate(prevPosition: OverdrivePosition, prevElement: React.ReactElement<any>) {
-    const { duration = 200 } = this.props;
+    const { duration = 200, lockscroll = true } = this.props;
 
     prevPosition.top += (window.pageYOffset || document.documentElement.scrollTop);
     const nextPosition = this.getPosition(true);
-    const noTransform = 'scaleX(1) scaleY(1) translateX(0px) translateY(0px)';
     const targetScaleX = prevPosition.width / nextPosition.width;
     const targetScaleY = prevPosition.height / nextPosition.height;
     const targetTranslateX = prevPosition.left - nextPosition.left;
@@ -64,63 +67,85 @@ export default class Overdrive extends React.Component<OverdriveProps> {
       targetScaleY === 1 &&
       targetTranslateX === 0 &&
       targetTranslateY === 0) {
-        this.animateEnd();
-        return;
+      this.animateEnd();
+      return;
     }
-
-    const transition = {
-      // tslint:disable-next-line:max-line-length
-      transition: `transform ${duration / 1000}s cubic-bezier(0, 0, .2, 1), opacity ${duration / 1000}s cubic-bezier(0, 0, .2, 1)`,
-      transformOrigin: '0 0 0'
-    };
-
-    const sourceStart = React.cloneElement(prevElement, {
-      key: '1',
-      style: {
-        ...transition,
-        ...prevPosition,
-        opacity: 1,
-        transform: noTransform,
-        zIndex: 1000
-      }
-    });
-
-    const sourceEnd = React.cloneElement(prevElement, {
-      key: '1',
-      style: {
-        ...transition,
-        ...prevPosition,
-        margin: nextPosition.margin,
-        opacity: 1,
-        transform: `matrix(${1 / targetScaleX}, 0, 0, ${1 / targetScaleY}, ${-targetTranslateX}, ${-targetTranslateY})`,
-        zIndex: 1000
-      }
-    });
-
-    const start = <div>{sourceStart}</div>;
-    const end = <div>{sourceEnd}</div>;
 
     this.setState({ loading: true });
 
     const bodyElement = document.createElement('div');
     window.document.body.appendChild(bodyElement);
     this.bodyElement = bodyElement;
-    renderSubtreeIntoContainer(this, start, bodyElement);
 
-    this.animationTimeout = requestAnimationFrame(() => {
-      renderSubtreeIntoContainer(this, end, bodyElement);
-      this.animationTimeout = setTimeout(this.animateEnd, duration);
-    });
+    const subtree: React.SFC<{ style: React.CSSProperties; ref?: React.Ref<HTMLSpanElement> }> = ({ style, ref }) => {
+      const children = React.cloneElement(prevElement, {
+        style: {
+          ...prevElement.props.style,
+          width: '100%',
+          height: '100%'
+        }
+      });
+      return (
+        <span
+          key='1'
+          ref={ref}
+          style={style}
+        >
+        {children}
+        </span>
+      );
+    };
+
+    const startAnimation = (element: HTMLElement) => {
+      const beginDate = Date.now();
+      const prevOverflow = document.body.style.overflow;
+      // if (lockscroll) {
+      //   document.body.style.overflow = 'hidden';
+      // }
+      const animationUpdate = () => {
+        const currentTime = Date.now() - beginDate;
+        const current = currentTime / duration;
+        const scaleX = lerp(current, 1, 1 / targetScaleX);
+        const scaleY = lerp(current, 1, 1 / targetScaleY);
+        const translateX = targetTranslateY < 0 ?
+          easeInQuad(current, 0, -targetTranslateX) : easeOutQuad(current, 0, -targetTranslateX);
+        const translateY = targetTranslateY < 0 ?
+          easeOutQuad(current, 0, -targetTranslateY) : easeInQuad(current, 0, -targetTranslateY);
+        element.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
+        if (current < 1) {
+          this.animationRequest = requestAnimationFrame(animationUpdate);
+        } else {
+          // if (lockscroll) {
+          //   document.body.style.overflow = prevOverflow;
+          // }
+          this.animateEnd();
+        }
+      };
+      this.animationRequest = requestAnimationFrame(animationUpdate);
+    };
+
+    renderSubtreeIntoContainer(this, subtree({
+      style: {
+        ...prevPosition,
+        margin: 0,
+        opacity: 1,
+        zIndex: 1001,
+        transform: 'scaleX(1) scaleY(1) translateX(0px) translateY(0px)',
+        transformOrigin: '0 0 0'
+      },
+      ref: (c) => startAnimation(c)
+    }), bodyElement);
   }
 
   animateEnd = () => {
-    this.animationTimeout = null;
     this.setState({ loading: false });
     if (this.props.onAnimationEnd) {
       this.props.onAnimationEnd();
     }
+    this.clearAnimations();
     if (this.bodyElement) {
       window.document.body.removeChild(this.bodyElement);
+      this.bodyElement = null;
     }
   }
 
@@ -155,7 +180,7 @@ export default class Overdrive extends React.Component<OverdriveProps> {
       if (animationDelay) {
         this.animationDelayTimeout = setTimeout(this.animate.bind(this, prevPosition, prevElement), animationDelay);
       } else {
-        requestAnimationFrame(() => this.animate(prevPosition, prevElement));
+        this.animate(prevPosition, prevElement);
       }
     } else {
       this.setState({ loading: false });
@@ -168,24 +193,11 @@ export default class Overdrive extends React.Component<OverdriveProps> {
 
   clearAnimations() {
     clearTimeout(this.animationDelayTimeout);
-    clearTimeout(this.animationTimeout);
-
-    if (this.animationTimeout) {
-      this.animateEnd();
-    }
+    cancelAnimationFrame(this.animationRequest);
   }
 
   componentWillUnmount() {
     this.onHide();
-  }
-
-  componentWillReceiveProps() {
-    this.onShowLock = false;
-    this.onHide();
-  }
-
-  componentDidUpdate() {
-    this.onShow();
   }
 
   getPosition(addOffset: boolean): OverdrivePosition {
@@ -207,21 +219,23 @@ export default class Overdrive extends React.Component<OverdriveProps> {
   }
 
   render() {
-    const { id, duration = 200, animationDelay, style = {}, children, element = 'div', ...rest } = this.props;
-    const newStyle = {
-      ...style,
-      opacity: (this.state.loading ? 0 : 1)
-    };
+    const { id, duration = 200, animationDelay, style = {}, children, ...rest } = this.props;
     const onlyChild = React.Children.only(children);
 
-    return React.createElement(
-      element,
+    const newStyle: React.CSSProperties = {
+      ...onlyChild.props.style,
+      ...style,
+      opacity: (this.state.loading ? 0 : 1),
+      willChange: 'opacity, transform'
+    };
+
+    return React.cloneElement(
+      onlyChild,
       {
-        ref: c => (this.element = c && c.firstChild as HTMLElement),
+        ref: (c: HTMLElement) => (this.element = c as HTMLElement),
         style: newStyle,
         ...rest
-      },
-      onlyChild
+      }
     );
   }
 }

@@ -37,7 +37,7 @@ module.exports = {
         "./src/example.tsx"
     ],
     output: {
-        filename: "cplayerexample.js",
+        filename: "seesee.js",
         path: __dirname + "/example"
     },
 

@@ -7,6 +7,7 @@ export interface ViewerLayoutProps {
     bottom?: React.ReactNode;
     bg?: React.ReactNode;
     className?: string;
+    fadeInCurrent?: number;
 }
 /**
  * Management components layout.

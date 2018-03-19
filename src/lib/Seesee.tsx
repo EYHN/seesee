@@ -1,41 +1,41 @@
 import * as React from 'react';
 import ModelView from './ModelView';
-import Overdrive from './Overdrive';
+import Overdrive from '../Components/Overdrive';
 
 const modelViewMountNode = document.body;
 
 export interface SeeseeProps {
   open: boolean;
+  onExit?: React.ReactEventHandler<HTMLButtonElement>;
 }
 
 export default class Seesee extends React.PureComponent<SeeseeProps> {
 
-  childrenElement: HTMLElement;
-
   public render() {
     const {
-      children: childrenProps,
-      open
+      children,
+      open,
+      onExit
     } = this.props;
-    const onlyChild = React.Children.only(childrenProps);
+    const onlyChild = React.Children.only(children);
     if (!React.isValidElement(onlyChild)) {
       return null;
     }
-    const children = React.cloneElement(onlyChild as React.ReactElement<any>, {
-      ref: (el: HTMLElement) => {
-        this.childrenElement = el;
-      }
-    });
     const overdrived = (
       <Overdrive id={'1'} duration={250}>
         {children}
       </Overdrive>
     );
-    const content = open ? (
-    <ModelView mountNode={modelViewMountNode} childrenElement={this.childrenElement}>
-      {overdrived}
-    </ModelView>
-    ) : overdrived;
-    return (content);
+    return (
+      <>
+        <ModelView
+          mountNode={modelViewMountNode}
+          onClickBackButton={onExit}
+        >
+          {open && overdrived}
+        </ModelView>
+        {!open ? overdrived : React.cloneElement(children as any)}
+      </>
+    );
   }
 }

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { easeInOutQuad } from '../utils/easing';
 
 export interface ViewerLayoutProps {
   style?: React.CSSProperties;
@@ -7,6 +8,7 @@ export interface ViewerLayoutProps {
   bottom?: React.ReactNode;
   bg?: React.ReactNode;
   className?: string;
+  fadeInCurrent?: number;
 }
 
 /**
@@ -21,17 +23,28 @@ const ViewerLayout: React.SFC<ViewerLayoutProps> = ({
   bottom,
   bg,
   style,
+  fadeInCurrent,
   className
-}) => (
-  <div style={{...styles.root, ...style}} className={className}>
-    <div role='background' style={styles.bg}>{bg}</div>
-    <nav style={styles.nav}>{nav}</nav>
-    <div style={styles.content} role='content'>
-      {children}
+}) => {
+  const backgroundStyle: React.CSSProperties = {
+    ...styles.bg,
+    opacity: fadeInCurrent
+  };
+  const navStyle: React.CSSProperties = {
+    ...styles.nav,
+    transform: `translateY(${(fadeInCurrent - 1) * 100}%)`
+  };
+  return (
+    <div style={{...styles.root, ...style}} className={className}>
+      <div role='background' style={backgroundStyle}>{bg}</div>
+      <nav style={navStyle}>{nav}</nav>
+      <div style={styles.content} role='content'>
+        {children}
+      </div>
+      <footer style={styles.footer}>{bottom}</footer>
     </div>
-    <footer style={styles.footer}>{bottom}</footer>
-  </div>
-);
+  );
+};
 
 export default ViewerLayout;
 
@@ -53,20 +66,23 @@ const styles: {[key: string]: React.CSSProperties} = {
     flexGrow: 1,
     flexShrink: 1,
     width: '100%',
-    height: '100%'
+    height: '100%',
+    zIndex: 0
   },
   nav: {
     flexShrink: 0,
     position: 'absolute',
     top: 0,
     left: 0,
-    width: '100%'
+    width: '100%',
+    zIndex: 1
   },
   footer: {
     flexShrink: 0,
     position: 'absolute',
     bottom: 0,
     left: 0,
-    width: '100%'
+    width: '100%',
+    zIndex: 1
   }
 };
