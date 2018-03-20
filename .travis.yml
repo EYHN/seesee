@@ -11,4 +11,4 @@ install:
 script:
   - npm run build  # build
 after_script:
-  - 'bash ./script/deploy_gh_page.sh'
+  - 'bash ./deploy_gh_page.sh'

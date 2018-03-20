@@ -1,4 +1,4 @@
-import Seesee from './lib/seesee';
+import Seesee from './lib/Seesee';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 

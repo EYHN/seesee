@@ -1,5 +1,5 @@
 mkdir ./deploy-gh-page
-cp -rf "${DeployPath}" ./deploy-gh-page
+cp -rf ${DeployPath} ./deploy-gh-page
 cd ./deploy-gh-page
 
 git init
