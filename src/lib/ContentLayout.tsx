@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { easeOutQuad, lerp } from '../utils/easing';
+import { easeOutQuad, lerp, easeOutBack } from '../utils/easing';
 import TouchEventManager from '../utils/touch/TouchEventManager';
 import {
   isSingleFinger,
@@ -25,7 +25,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
 
   animationRequest: number;
 
-  childrenElement: HTMLElement;
+  rootElement: HTMLElement;
 
   touchEventManager: TouchEventManager = new TouchEventManager();
 
@@ -72,10 +72,74 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
         ...this.state,
-        offsetX: easeOutQuad(current, beginOffsetX, 0),
-        offsetY: easeOutQuad(current, beginOffsetY, 0),
-        scaleX: lerp(current, beginScaleX, 1),
-        scaleY: lerp(current, beginScaleY, 1)
+        offsetX: easeOutBack(current, beginOffsetX, 0),
+        offsetY: easeOutBack(current, beginOffsetY, 0),
+        scaleX: easeOutBack(current, beginScaleX, 1),
+        scaleY: easeOutBack(current, beginScaleY, 1)
+      });
+      if (current !== 1) {
+        this.animationRequest = requestAnimationFrame(update);
+      }
+    };
+    this.startAnimationFrame(update);
+  }
+
+  stayWithinRange = () => {
+    const startTime = Date.now();
+
+    // The animation duration milliseconds.
+    const duration = 200;
+
+    const childrenElement = this.rootElement.firstElementChild;
+    const clientHeight = this.rootElement.getBoundingClientRect().height;
+    const clientWidth = this.rootElement.getBoundingClientRect().width;
+    const clientRect = childrenElement.getBoundingClientRect();
+    const left = clientRect.left,
+      right = clientWidth - clientRect.right,
+      bottom = clientHeight - clientRect.bottom,
+      top = clientRect.top;
+    const { offsetX: beginOffsetX, offsetY: beginOffsetY, scaleX: beginScaleX, scaleY: beginScaleY } = this.state;
+    let targetOffsetX = 0, targetOffsetY = 0, targetScaleX = beginScaleX, targetScaleY = beginScaleY;
+    if (left > 0 && right > 0 || left + right > 0) {
+      targetOffsetX = 0;
+    } else if (left > 0 && right <= 0) {
+      targetOffsetX = beginOffsetX - left;
+    } else if (right > 0 && left <= 0) {
+      targetOffsetX = beginOffsetX + right;
+    } else {
+      targetOffsetX = beginOffsetX;
+    }
+
+    if (top > 0 && bottom > 0 || top + bottom > 0) {
+      targetOffsetY = 0;
+    } else if (top > 0 && bottom <= 0) {
+      targetOffsetY = beginOffsetY - top;
+    } else if (bottom > 0 && top <= 0) {
+      targetOffsetY = beginOffsetY + bottom;
+    } else {
+      targetOffsetY = beginOffsetY;
+    }
+
+    if (beginScaleX < beginScaleY) {
+      if (beginScaleX < 1) {
+        targetScaleX = 1;
+        targetScaleY = targetScaleX / beginScaleX * beginScaleY;
+      }
+    } else {
+      if (beginScaleY < 1) {
+        targetScaleY = 1;
+        targetScaleX = targetScaleY / beginScaleY * beginScaleX;
+      }
+    }
+
+    const update = () => {
+      const current = Math.min((Date.now() - startTime) / duration, 1);
+      this.setState({
+        ...this.state,
+        offsetX: easeOutBack(current, beginOffsetX, targetOffsetX),
+        offsetY: easeOutBack(current, beginOffsetY, targetOffsetY),
+        scaleX: easeOutBack(current, beginScaleX, targetScaleX),
+        scaleY: easeOutBack(current, beginScaleY, targetScaleY)
       });
       if (current !== 1) {
         this.animationRequest = requestAnimationFrame(update);
@@ -99,10 +163,11 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         });
       } else if (isMultipleFingers(touches)) {
         // If there are multiple fingers touching.
-        const clientHeight = document.documentElement.clientHeight;
-        const clientWidth = document.documentElement.clientWidth;
 
-        // Pinch to zoom.
+        const clientHeight = this.rootElement.getBoundingClientRect().height;
+        const clientWidth = this.rootElement.getBoundingClientRect().width;
+
+        // Fingers scaling.
         const scalingRatio = getScaling(touches);
         const { x: centerX, y: centerY } = getTouchesCenter(getTouches(touches));
 
@@ -120,7 +185,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
           });
         });
       } else {
-        this.returnOrigin();
+        this.stayWithinRange();
       }
       event.preventDefault();
     }
@@ -132,6 +197,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     el.addEventListener('touchend', this.touchEventManager.handleTouchEvent, { passive: false });
     el.addEventListener('touchmove', this.touchEventManager.handleTouchEvent, { passive: false });
     el.addEventListener('touchcancel', this.touchEventManager.handleTouchEvent, { passive: false });
+    this.rootElement = el;
   }
 
   // tslint:disable-next-line:member-ordering

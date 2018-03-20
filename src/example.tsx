@@ -2,7 +2,7 @@ import Seesee from './lib/seesee';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
-const exampleImage = require('url-loader!./example.png');
+const exampleImage = require('url-loader!./example.jpg');
 
 const MOUNT_NODE = document.getElementById('app');
 
@@ -56,6 +56,7 @@ class App extends React.PureComponent {
             style={{background: '#000'}}
             onClick={this.handleClickImage}
             src={exampleImage}
+            width='200px'
           />
         </Seesee>
         <br/>

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { lerp, easeOutQuad, easeInQuad } from '../utils/easing';
+import { lerp, easeOutQuad, easeInQuad, easeOutBack } from '../utils/easing';
 
 export interface OverdriveProps {
   id: string;
@@ -105,12 +105,12 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
       const animationUpdate = () => {
         const currentTime = Date.now() - beginDate;
         const current = currentTime / duration;
-        const scaleX = lerp(current, 1, 1 / targetScaleX);
-        const scaleY = lerp(current, 1, 1 / targetScaleY);
+        const scaleX = easeOutBack(current, 1, 1 / targetScaleX);
+        const scaleY = easeOutBack(current, 1, 1 / targetScaleY);
         const translateX = targetTranslateY < 0 ?
-          easeInQuad(current, 0, -targetTranslateX) : easeOutQuad(current, 0, -targetTranslateX);
+          easeOutBack(current, 0, -targetTranslateX) : easeOutBack(current, 0, -targetTranslateX);
         const translateY = targetTranslateY < 0 ?
-          easeOutQuad(current, 0, -targetTranslateY) : easeInQuad(current, 0, -targetTranslateY);
+          easeOutBack(current, 0, -targetTranslateY) : easeOutBack(current, 0, -targetTranslateY);
         element.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
         if (current < 1) {
           this.animationRequest = requestAnimationFrame(animationUpdate);
