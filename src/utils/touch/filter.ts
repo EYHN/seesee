@@ -8,7 +8,7 @@ export function isTwoFingers(touches: Touches) {
   return touches.size === 2;
 }
 
-export function isFingers(touches: Touches) {
+export function isMultipleFingers(touches: Touches) {
   return touches.size > 1;
 }
 
@@ -78,7 +78,7 @@ export function getTouches(touches: Touches, timeIndex: number = -1) {
   return res;
 }
 
-export function getScalingDistance(touches: Touches) {
+export function getScaling(touches: Touches) {
   const oldTouches: Touch[] = [];
   const newTouches: Touch[] = [];
   for (const touch of touches.values()) {
@@ -88,5 +88,5 @@ export function getScalingDistance(touches: Touches) {
   }
   const oldDistance = getDistanceBetweenTouches(oldTouches);
   const newDistance = getDistanceBetweenTouches(newTouches);
-  return newDistance.distance - oldDistance.distance;
+  return (newDistance.distance / oldDistance.distance) || 1;
 }

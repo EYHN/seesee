@@ -5,8 +5,8 @@ import {
   isSingleFinger,
   getFirstFinger,
   getMoveDistance,
-  getScalingDistance,
-  isFingers,
+  getScaling,
+  isMultipleFingers,
   getTouchesCenter,
   getTouches
 } from '../utils/touch/filter';
@@ -58,6 +58,9 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     this.animationRequest = requestAnimationFrame(c);
   }
 
+  /**
+   * Back to origin with animation.
+   */
   returnOrigin = () => {
     const startTime = Date.now();
 
@@ -66,7 +69,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
 
     const { offsetX: beginOffsetX, offsetY: beginOffsetY, scaleX: beginScaleX, scaleY: beginScaleY } = this.state;
     const update = () => {
-      const current = (Date.now() - startTime) / duration;
+      const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
         ...this.state,
         offsetX: easeOutQuad(current, beginOffsetX, 0),
@@ -74,25 +77,18 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         scaleX: lerp(current, beginScaleX, 1),
         scaleY: lerp(current, beginScaleY, 1)
       });
-      if (current < 1) {
+      if (current !== 1) {
         this.animationRequest = requestAnimationFrame(update);
       }
     };
     this.startAnimationFrame(update);
   }
 
-  // private getWindowShortestEdge = () => {
-  //   return document.documentElement.clientHeight < document.documentElement.clientWidth ? 'height' : 'width';
-  // }
-
-  // private handleWindowResize = (e: UIEvent) => {
-  //   this.forceUpdate();
-  // }
-
   private handleTouch = async () => {
     while (true) {
       const { event, touches, changedTouches } = await this.touchEventManager.getNextUpdateEvent();
       if (isSingleFinger(touches)) {
+        // If only one finger touches
         const { moveX, moveY } = getMoveDistance(changedTouches);
         this.startAnimationFrame(() => {
           this.setState({
@@ -101,26 +97,26 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
             offsetY: this.state.offsetY + moveY
           });
         });
-      } else if (isFingers(touches)) {
-        // const clientDiagonal =
-        //   Math.sqrt(
-        //     Math.pow(document.documentElement.clientHeight, 2) +
-        //     Math.pow(document.documentElement.clientWidth, 2));
+      } else if (isMultipleFingers(touches)) {
+        // If there are multiple fingers touching.
         const clientHeight = document.documentElement.clientHeight;
         const clientWidth = document.documentElement.clientWidth;
-        const scalingRatio = (getScalingDistance(touches) || 0) /
-          Math.min(clientHeight, clientWidth);
+
+        // Pinch to zoom.
+        const scalingRatio = getScaling(touches);
         const { x: centerX, y: centerY } = getTouchesCenter(getTouches(touches));
-        const centerOffsetX = (centerX - (clientWidth / 2)) * this.state.scaleX * -1;
-        const centerOffsetY = (centerY - (clientHeight / 2)) * this.state.scaleY * -1;
-        // const { moveX, moveY } = getMoveDistance(changedTouches);
+
+        const centerOffsetX = -(centerX - (clientWidth / 2)) * (scalingRatio - 1) * this.state.scaleX;
+        const centerOffsetY = -(centerY - (clientHeight / 2)) * (scalingRatio - 1) * this.state.scaleY;
+
+        const { moveX, moveY } = getMoveDistance(changedTouches);
         this.startAnimationFrame(() => {
           this.setState({
             ...this.state,
-            scaleX: this.state.scaleX * Math.pow((scalingRatio + 1), 2),
-            scaleY: this.state.scaleY * Math.pow((scalingRatio + 1), 2),
-            offsetX: centerOffsetX,
-            offsetY: centerOffsetY
+            scaleX: this.state.scaleX * scalingRatio,
+            scaleY: this.state.scaleY * scalingRatio,
+            offsetX: this.state.offsetX + moveX + centerOffsetX,
+            offsetY: this.state.offsetY + moveY + centerOffsetY
           });
         });
       } else {
@@ -147,9 +143,6 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     if (!childrenProps) { return <div style={styles.root} />; }
     React.Children.only(childrenProps);
     if (React.isValidElement(childrenProps)) {
-      // if (this.s) {
-      //   this.s = this.getWindowShortestEdge();
-      // }
       const children = React.cloneElement(childrenProps as any, {
         style: {
           ...(childrenProps as any).props.style,
