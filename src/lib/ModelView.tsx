@@ -6,6 +6,17 @@ import { easeOutCubic, easeInCubic } from '../utils/easing';
 import Appbar from '../Components/Appbar';
 import IconButton from '../Components/Icons/IconButton';
 import ArrawBack from '../Components/Icons/ArrawBack';
+import TouchEventManager from '../utils/touch/TouchEventManager';
+import { easeOutQuad, lerp, easeOutBack } from '../utils/easing';
+import {
+  isSingleFinger,
+  getFirstFinger,
+  getMoveDistance,
+  getScaling,
+  isMultipleFingers,
+  getTouchesCenter,
+  getTouches
+} from '../utils/touch/filter';
 
 export interface ModelViewProps {
   /**
@@ -25,13 +36,48 @@ export interface ModelViewProps {
  */
 export default class ModelView extends React.PureComponent<ModelViewProps> {
   animationRequest: number;
+  contentAnimationRequest: number;
+  contentLayoutElement: HTMLElement;
   bgElement: HTMLSpanElement;
-
+  touchEventManager: TouchEventManager = new TouchEventManager();
   state = {
     fadeInCurrent: 0,
     hasShow: false,
-    display: false
+    display: false,
+    offsetX: 0,
+    offsetY: 0,
+    scaleX: 1,
+    scaleY: 1
   };
+
+  constructor(props: ModelViewProps) {
+    super(props);
+    this.handleTouch();
+  }
+
+  componentDidMount() {
+    if (this.state.hasShow !== !!this.props.children) {
+      if (!!this.props.children) {
+        this.beginFadeInAnimation();
+      } else {
+        this.beginFadeOutAnimation();
+      }
+    }
+  }
+
+  componentWillUnmount() {
+    cancelAnimationFrame(this.animationRequest);
+  }
+
+  componentWillReceiveProps(nextProps: { children: React.ReactNode } & ModelViewProps) {
+    if (this.state.hasShow !== !!nextProps.children) {
+      if (!!nextProps.children) {
+        this.beginFadeInAnimation();
+      } else {
+        this.beginFadeOutAnimation();
+      }
+    }
+  }
 
   public beginFadeInAnimation = () => {
     if (this.animationRequest) {
@@ -77,36 +123,147 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     this.animationRequest = requestAnimationFrame(animationUpdate);
   }
 
-  // handleClickBack: React.ReactEventHandler<HTMLButtonElement> = (e) => {
-  //   this.setState({
+  /**
+   * Back to origin with animation.
+   */
+  public returnOrigin = () => {
+    const startTime = Date.now();
 
-  //   })
-  // };
+    // The animation duration milliseconds.
+    const duration = 200;
 
-  componentDidMount() {
-    if (this.state.hasShow !== !!this.props.children) {
-      if (!!this.props.children) {
-        this.beginFadeInAnimation();
-      } else {
-        this.beginFadeOutAnimation();
+    const { offsetX: beginOffsetX, offsetY: beginOffsetY, scaleX: beginScaleX, scaleY: beginScaleY } = this.state;
+    const update = () => {
+      const current = Math.min((Date.now() - startTime) / duration, 1);
+      this.setState({
+        ...this.state,
+        offsetX: easeOutBack(current, beginOffsetX, 0),
+        offsetY: easeOutBack(current, beginOffsetY, 0),
+        scaleX: easeOutBack(current, beginScaleX, 1),
+        scaleY: easeOutBack(current, beginScaleY, 1)
+      });
+      if (current !== 1) {
+        this.contentAnimationRequest = requestAnimationFrame(update);
       }
+    };
+    this.startAnimationFrame(update);
+  }
+
+  public stayWithinRange = () => {
+    const startTime = Date.now();
+
+    // The animation duration milliseconds.
+    const duration = 200;
+
+    const childrenElement = this.contentLayoutElement.firstElementChild;
+    const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
+    const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
+    const clientRect = childrenElement.getBoundingClientRect();
+    const left = clientRect.left,
+      right = clientWidth - clientRect.right,
+      bottom = clientHeight - clientRect.bottom,
+      top = clientRect.top;
+    const { offsetX: beginOffsetX, offsetY: beginOffsetY, scaleX: beginScaleX, scaleY: beginScaleY } = this.state;
+    let targetOffsetX = 0, targetOffsetY = 0, targetScaleX = beginScaleX, targetScaleY = beginScaleY;
+    if (left > 0 && right > 0 || left + right > 0) {
+      targetOffsetX = 0;
+    } else if (left > 0 && right <= 0) {
+      targetOffsetX = beginOffsetX - left;
+    } else if (right > 0 && left <= 0) {
+      targetOffsetX = beginOffsetX + right;
+    } else {
+      targetOffsetX = beginOffsetX;
+    }
+
+    if (top > 0 && bottom > 0 || top + bottom > 0) {
+      targetOffsetY = 0;
+    } else if (top > 0 && bottom <= 0) {
+      targetOffsetY = beginOffsetY - top;
+    } else if (bottom > 0 && top <= 0) {
+      targetOffsetY = beginOffsetY + bottom;
+    } else {
+      targetOffsetY = beginOffsetY;
+    }
+
+    if (beginScaleX < beginScaleY) {
+      if (beginScaleX < 1) {
+        targetScaleX = 1;
+        targetScaleY = targetScaleX / beginScaleX * beginScaleY;
+      }
+    } else {
+      if (beginScaleY < 1) {
+        targetScaleY = 1;
+        targetScaleX = targetScaleY / beginScaleY * beginScaleX;
+      }
+    }
+
+    const update = () => {
+      const current = Math.min((Date.now() - startTime) / duration, 1);
+      this.setState({
+        ...this.state,
+        offsetX: easeOutBack(current, beginOffsetX, targetOffsetX),
+        offsetY: easeOutBack(current, beginOffsetY, targetOffsetY),
+        scaleX: easeOutBack(current, beginScaleX, targetScaleX),
+        scaleY: easeOutBack(current, beginScaleY, targetScaleY)
+      });
+      if (current !== 1) {
+        this.contentAnimationRequest = requestAnimationFrame(update);
+      }
+    };
+    this.startAnimationFrame(update);
+  }
+
+  private startAnimationFrame = (c: FrameRequestCallback) => {
+    if (typeof this.contentAnimationRequest !== 'undefined') {
+      cancelAnimationFrame(this.contentAnimationRequest);
+    }
+    this.contentAnimationRequest = requestAnimationFrame(c);
+  }
+
+  private handleTouch = async () => {
+    while (true) {
+      const { event, touches, changedTouches } = await this.touchEventManager.getNextUpdateEvent();
+      if (isSingleFinger(touches)) {
+        // If only one finger touches
+        const { moveX, moveY } = getMoveDistance(changedTouches);
+        this.startAnimationFrame(() => {
+          this.setState({
+            ...this.state,
+            offsetX: this.state.offsetX + moveX,
+            offsetY: this.state.offsetY + moveY
+          });
+        });
+      } else if (isMultipleFingers(touches)) {
+        // If there are multiple fingers touching.
+
+        const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
+        const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
+
+        // Fingers scaling.
+        const scalingRatio = getScaling(touches);
+        const { x: centerX, y: centerY } = getTouchesCenter(getTouches(touches));
+
+        const centerOffsetX = -(centerX - (clientWidth / 2)) * (scalingRatio - 1) * this.state.scaleX;
+        const centerOffsetY = -(centerY - (clientHeight / 2)) * (scalingRatio - 1) * this.state.scaleY;
+
+        const { moveX, moveY } = getMoveDistance(changedTouches);
+        this.startAnimationFrame(() => {
+          this.setState({
+            ...this.state,
+            scaleX: this.state.scaleX * scalingRatio,
+            scaleY: this.state.scaleY * scalingRatio,
+            offsetX: this.state.offsetX + moveX + centerOffsetX,
+            offsetY: this.state.offsetY + moveY + centerOffsetY
+          });
+        });
+      } else {
+        this.stayWithinRange();
+      }
+      event.preventDefault();
     }
   }
 
-  componentWillUnmount() {
-    cancelAnimationFrame(this.animationRequest);
-  }
-
-  componentWillReceiveProps(nextProps: { children: React.ReactNode } & ModelViewProps) {
-    if (this.state.hasShow !== !!nextProps.children) {
-      if (!!nextProps.children) {
-        this.beginFadeInAnimation();
-      } else {
-        this.beginFadeOutAnimation();
-      }
-    }
-  }
-
+  // tslint:disable-next-line:member-ordering
   public render() {
     const {
       children,
@@ -127,7 +284,18 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         fadeInCurrent={this.state.fadeInCurrent}
         style={{ ...styles.root, visibility: !this.state.display && 'hidden' }}
       >
-        <ContentLayout enable>
+        <ContentLayout
+          enable
+          onTouchCancel={this.touchEventManager.handleTouchEvent}
+          onTouchEnd={this.touchEventManager.handleTouchEvent}
+          onTouchMove={this.touchEventManager.handleTouchEvent}
+          onTouchStart={this.touchEventManager.handleTouchEvent}
+          rootref={(el) => this.contentLayoutElement = el}
+          scaleX={this.state.scaleX}
+          scaleY={this.state.scaleY}
+          offsetX={this.state.offsetX}
+          offsetY={this.state.offsetY}
+        >
           {children}
         </ContentLayout>
       </ViewerLayout>,

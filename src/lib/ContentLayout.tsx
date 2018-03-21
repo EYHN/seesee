@@ -1,15 +1,4 @@
 import * as React from 'react';
-import { easeOutQuad, lerp, easeOutBack } from '../utils/easing';
-import TouchEventManager from '../utils/touch/TouchEventManager';
-import {
-  isSingleFinger,
-  getFirstFinger,
-  getMoveDistance,
-  getScaling,
-  isMultipleFingers,
-  getTouchesCenter,
-  getTouches
-} from '../utils/touch/filter';
 
 function squareWithSigned(x: number) {
   return x < 0 ? -Math.pow(x, 2) : Math.pow(x, 2);
@@ -18,25 +7,21 @@ function squareWithSigned(x: number) {
 export interface ContentLayoutProps {
   enable: boolean;
   style?: React.CSSProperties;
+  onTouchStart?: (this: ApplicationCache, ev: TouchEvent) => any;
+  onTouchMove?: (this: ApplicationCache, ev: TouchEvent) => any;
+  onTouchEnd?: (this: ApplicationCache, ev: TouchEvent) => any;
+  onTouchCancel?: (this: ApplicationCache, ev: TouchEvent) => any;
+  rootref?: React.Ref<HTMLElement>;
+  scaleX?: number;
+  scaleY?: number;
+  offsetX?: number;
+  offsetY?: number;
 }
 
 export default class ContentLayout extends React.PureComponent<ContentLayoutProps> {
   prevTouchList: TouchList;
 
-  animationRequest: number;
-
-  rootElement: HTMLElement;
-
-  touchEventManager: TouchEventManager = new TouchEventManager();
-
   // s: 'height' | 'width';
-
-  state = {
-    offsetX: 0,
-    offsetY: 0,
-    scaleX: 1,
-    scaleY: 1
-  };
 
   // componentDidMount() {
   //   window.addEventListener('resize', this.handleWindowResize);
@@ -46,165 +31,26 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
   //   window.removeEventListener('resize', this.handleWindowResize);
   // }
 
-  constructor(props: ContentLayoutProps) {
-    super(props);
-    this.handleTouch();
-  }
-
-  startAnimationFrame = (c: FrameRequestCallback) => {
-    if (typeof this.animationRequest !== 'undefined') {
-      cancelAnimationFrame(this.animationRequest);
-    }
-    this.animationRequest = requestAnimationFrame(c);
-  }
-
-  /**
-   * Back to origin with animation.
-   */
-  returnOrigin = () => {
-    const startTime = Date.now();
-
-    // The animation duration milliseconds.
-    const duration = 200;
-
-    const { offsetX: beginOffsetX, offsetY: beginOffsetY, scaleX: beginScaleX, scaleY: beginScaleY } = this.state;
-    const update = () => {
-      const current = Math.min((Date.now() - startTime) / duration, 1);
-      this.setState({
-        ...this.state,
-        offsetX: easeOutBack(current, beginOffsetX, 0),
-        offsetY: easeOutBack(current, beginOffsetY, 0),
-        scaleX: easeOutBack(current, beginScaleX, 1),
-        scaleY: easeOutBack(current, beginScaleY, 1)
-      });
-      if (current !== 1) {
-        this.animationRequest = requestAnimationFrame(update);
-      }
-    };
-    this.startAnimationFrame(update);
-  }
-
-  stayWithinRange = () => {
-    const startTime = Date.now();
-
-    // The animation duration milliseconds.
-    const duration = 200;
-
-    const childrenElement = this.rootElement.firstElementChild;
-    const clientHeight = this.rootElement.getBoundingClientRect().height;
-    const clientWidth = this.rootElement.getBoundingClientRect().width;
-    const clientRect = childrenElement.getBoundingClientRect();
-    const left = clientRect.left,
-      right = clientWidth - clientRect.right,
-      bottom = clientHeight - clientRect.bottom,
-      top = clientRect.top;
-    const { offsetX: beginOffsetX, offsetY: beginOffsetY, scaleX: beginScaleX, scaleY: beginScaleY } = this.state;
-    let targetOffsetX = 0, targetOffsetY = 0, targetScaleX = beginScaleX, targetScaleY = beginScaleY;
-    if (left > 0 && right > 0 || left + right > 0) {
-      targetOffsetX = 0;
-    } else if (left > 0 && right <= 0) {
-      targetOffsetX = beginOffsetX - left;
-    } else if (right > 0 && left <= 0) {
-      targetOffsetX = beginOffsetX + right;
-    } else {
-      targetOffsetX = beginOffsetX;
-    }
-
-    if (top > 0 && bottom > 0 || top + bottom > 0) {
-      targetOffsetY = 0;
-    } else if (top > 0 && bottom <= 0) {
-      targetOffsetY = beginOffsetY - top;
-    } else if (bottom > 0 && top <= 0) {
-      targetOffsetY = beginOffsetY + bottom;
-    } else {
-      targetOffsetY = beginOffsetY;
-    }
-
-    if (beginScaleX < beginScaleY) {
-      if (beginScaleX < 1) {
-        targetScaleX = 1;
-        targetScaleY = targetScaleX / beginScaleX * beginScaleY;
-      }
-    } else {
-      if (beginScaleY < 1) {
-        targetScaleY = 1;
-        targetScaleX = targetScaleY / beginScaleY * beginScaleX;
-      }
-    }
-
-    const update = () => {
-      const current = Math.min((Date.now() - startTime) / duration, 1);
-      this.setState({
-        ...this.state,
-        offsetX: easeOutBack(current, beginOffsetX, targetOffsetX),
-        offsetY: easeOutBack(current, beginOffsetY, targetOffsetY),
-        scaleX: easeOutBack(current, beginScaleX, targetScaleX),
-        scaleY: easeOutBack(current, beginScaleY, targetScaleY)
-      });
-      if (current !== 1) {
-        this.animationRequest = requestAnimationFrame(update);
-      }
-    };
-    this.startAnimationFrame(update);
-  }
-
-  private handleTouch = async () => {
-    while (true) {
-      const { event, touches, changedTouches } = await this.touchEventManager.getNextUpdateEvent();
-      if (isSingleFinger(touches)) {
-        // If only one finger touches
-        const { moveX, moveY } = getMoveDistance(changedTouches);
-        this.startAnimationFrame(() => {
-          this.setState({
-            ...this.state,
-            offsetX: this.state.offsetX + moveX,
-            offsetY: this.state.offsetY + moveY
-          });
-        });
-      } else if (isMultipleFingers(touches)) {
-        // If there are multiple fingers touching.
-
-        const clientHeight = this.rootElement.getBoundingClientRect().height;
-        const clientWidth = this.rootElement.getBoundingClientRect().width;
-
-        // Fingers scaling.
-        const scalingRatio = getScaling(touches);
-        const { x: centerX, y: centerY } = getTouchesCenter(getTouches(touches));
-
-        const centerOffsetX = -(centerX - (clientWidth / 2)) * (scalingRatio - 1) * this.state.scaleX;
-        const centerOffsetY = -(centerY - (clientHeight / 2)) * (scalingRatio - 1) * this.state.scaleY;
-
-        const { moveX, moveY } = getMoveDistance(changedTouches);
-        this.startAnimationFrame(() => {
-          this.setState({
-            ...this.state,
-            scaleX: this.state.scaleX * scalingRatio,
-            scaleY: this.state.scaleY * scalingRatio,
-            offsetX: this.state.offsetX + moveX + centerOffsetX,
-            offsetY: this.state.offsetY + moveY + centerOffsetY
-          });
-        });
-      } else {
-        this.stayWithinRange();
-      }
-      event.preventDefault();
-    }
-  }
-
   private handleRef: React.Ref<HTMLElement> = (el) => {
     if (!el) { return; }
-    el.addEventListener('touchstart', this.touchEventManager.handleTouchEvent, { passive: false });
-    el.addEventListener('touchend', this.touchEventManager.handleTouchEvent, { passive: false });
-    el.addEventListener('touchmove', this.touchEventManager.handleTouchEvent, { passive: false });
-    el.addEventListener('touchcancel', this.touchEventManager.handleTouchEvent, { passive: false });
-    this.rootElement = el;
+    el.addEventListener('touchstart', this.props.onTouchStart, { passive: false });
+    el.addEventListener('touchend', this.props.onTouchEnd, { passive: false });
+    el.addEventListener('touchmove', this.props.onTouchMove, { passive: false });
+    el.addEventListener('touchcancel', this.props.onTouchCancel, { passive: false });
+    if (typeof this.props.rootref === 'function') {
+      this.props.rootref(el);
+    }
   }
 
   // tslint:disable-next-line:member-ordering
   public render() {
     const {
       children: childrenProps,
-      style: styleProp
+      style: styleProp,
+      scaleX = 0,
+      scaleY = 0,
+      offsetX = 0,
+      offsetY = 0
     } = this.props;
     if (!childrenProps) { return <div style={styles.root} />; }
     React.Children.only(childrenProps);
@@ -216,7 +62,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
           maxWidth: '100%',
           width: '100vh',
           // tslint:disable-next-line:max-line-length
-          transform: `matrix(${this.state.scaleX}, 0, 0, ${this.state.scaleY}, ${this.state.offsetX}, ${this.state.offsetY})`
+          transform: `matrix(${scaleX}, 0, 0, ${scaleY}, ${offsetX}, ${offsetY})`
         }
       });
       return (
