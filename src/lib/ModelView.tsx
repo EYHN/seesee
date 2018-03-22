@@ -225,12 +225,12 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     if (beginScaleX < beginScaleY) {
       if (beginScaleX < 1) {
         targetScaleX = 1;
-        targetScaleY = targetScaleX / beginScaleX * beginScaleY;
+        targetScaleY = parseFloat((targetScaleX / beginScaleX * beginScaleY).toPrecision(12));
       }
     } else {
       if (beginScaleY < 1) {
         targetScaleY = 1;
-        targetScaleX = targetScaleY / beginScaleY * beginScaleX;
+        targetScaleX = parseFloat((targetScaleY / beginScaleY * beginScaleX).toPrecision(12));
       }
     }
 
@@ -285,7 +285,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
           this.setState({
             ...this.state,
             offsetX: this.state.offsetX + moveX,
-            offsetY: this.state.offsetY + moveY
+            offsetY: this.state.offsetY + moveY,
+            fadeInCurrent: 1
           });
         });
       } else if (isMultipleFingers(touches)) {
@@ -308,7 +309,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
             scaleX: this.state.scaleX * scalingRatio,
             scaleY: this.state.scaleY * scalingRatio,
             offsetX: this.state.offsetX + moveX + centerOffsetX,
-            offsetY: this.state.offsetY + moveY + centerOffsetY
+            offsetY: this.state.offsetY + moveY + centerOffsetY,
+            fadeInCurrent: 1
           });
         });
       } else {
