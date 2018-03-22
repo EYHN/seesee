@@ -17,6 +17,7 @@ import {
   getTouchesCenter,
   getTouches
 } from '../utils/touch/filter';
+import { pure } from 'recompose';
 
 export interface ModelViewProps {
   /**
@@ -38,7 +39,6 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   animationRequest: number;
   contentAnimationRequest: number;
   contentLayoutElement: HTMLElement;
-  bgElement: HTMLSpanElement;
   touchEventManager: TouchEventManager = new TouchEventManager();
   state = {
     fadeInCurrent: 0,
@@ -58,9 +58,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   componentDidMount() {
     if (this.state.hasShow !== !!this.props.children) {
       if (!!this.props.children) {
-        this.beginFadeInAnimation();
+        this.onOpen();
       } else {
-        this.beginFadeOutAnimation();
+        this.onClose();
       }
     }
   }
@@ -72,22 +72,32 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   componentWillReceiveProps(nextProps: { children: React.ReactNode } & ModelViewProps) {
     if (this.state.hasShow !== !!nextProps.children) {
       if (!!nextProps.children) {
-        this.beginFadeInAnimation();
+        this.onOpen();
       } else {
-        this.beginFadeOutAnimation();
+        this.onClose();
       }
     }
+  }
+
+  onOpen() {
+    this.beginFadeInAnimation();
+    this.resetState();
+  }
+
+  onClose() {
+    this.beginFadeOutAnimation();
   }
 
   public beginFadeInAnimation = () => {
     if (this.animationRequest) {
       cancelAnimationFrame(this.animationRequest);
     }
+    const beginFadeInCurrent = this.state.fadeInCurrent;
     const beginDate = Date.now();
     const duration = 250;
     const animationUpdate = () => {
       const currentTime = Date.now() - beginDate;
-      const current = easeOutCubic(currentTime / duration, 0, 1);
+      const current = easeOutCubic(currentTime / duration, beginFadeInCurrent, 1);
       this.setState({
         ...this.state,
         fadeInCurrent: current,
@@ -105,11 +115,12 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     if (this.animationRequest) {
       cancelAnimationFrame(this.animationRequest);
     }
+    const beginFadeInCurrent = this.state.fadeInCurrent;
     const beginDate = Date.now();
     const duration = 250;
     const animationUpdate = () => {
       const currentTime = Date.now() - beginDate;
-      const current = 1 - easeInCubic(currentTime / duration, 0, 1);
+      const current = easeOutCubic(currentTime / duration, beginFadeInCurrent, 0);
       this.setState({
         ...this.state,
         fadeInCurrent: current,
@@ -124,6 +135,21 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   }
 
   /**
+   * force reset the state.
+   */
+  public resetState() {
+    this.setState({
+      fadeInCurrent: 0,
+      hasShow: false,
+      display: false,
+      offsetX: 0,
+      offsetY: 0,
+      scaleX: 1,
+      scaleY: 1
+    });
+  }
+
+  /**
    * Back to origin with animation.
    */
   public returnOrigin = () => {
@@ -132,15 +158,21 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     // The animation duration milliseconds.
     const duration = 200;
 
-    const { offsetX: beginOffsetX, offsetY: beginOffsetY, scaleX: beginScaleX, scaleY: beginScaleY } = this.state;
+    const {
+      offsetX: beginOffsetX,
+      offsetY: beginOffsetY,
+      scaleX: beginScaleX,
+      scaleY: beginScaleY,
+      fadeInCurrent: beginFadeInCurrent } = this.state;
     const update = () => {
       const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
         ...this.state,
-        offsetX: easeOutBack(current, beginOffsetX, 0),
-        offsetY: easeOutBack(current, beginOffsetY, 0),
-        scaleX: easeOutBack(current, beginScaleX, 1),
-        scaleY: easeOutBack(current, beginScaleY, 1)
+        offsetX: easeOutQuad(current, beginOffsetX, 0),
+        offsetY: easeOutQuad(current, beginOffsetY, 0),
+        scaleX: easeOutQuad(current, beginScaleX, 1),
+        scaleY: easeOutQuad(current, beginScaleY, 1),
+        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1)
       });
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
@@ -163,7 +195,12 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       right = clientWidth - clientRect.right,
       bottom = clientHeight - clientRect.bottom,
       top = clientRect.top;
-    const { offsetX: beginOffsetX, offsetY: beginOffsetY, scaleX: beginScaleX, scaleY: beginScaleY } = this.state;
+    const {
+      offsetX: beginOffsetX,
+      offsetY: beginOffsetY,
+      scaleX: beginScaleX,
+      scaleY: beginScaleY,
+      fadeInCurrent: beginFadeInCurrent } = this.state;
     let targetOffsetX = 0, targetOffsetY = 0, targetScaleX = beginScaleX, targetScaleY = beginScaleY;
     if (left > 0 && right > 0 || left + right > 0) {
       targetOffsetX = 0;
@@ -201,10 +238,11 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
         ...this.state,
-        offsetX: easeOutBack(current, beginOffsetX, targetOffsetX),
-        offsetY: easeOutBack(current, beginOffsetY, targetOffsetY),
-        scaleX: easeOutBack(current, beginScaleX, targetScaleX),
-        scaleY: easeOutBack(current, beginScaleY, targetScaleY)
+        offsetX: easeOutQuad(current, beginOffsetX, targetOffsetX),
+        offsetY: easeOutQuad(current, beginOffsetY, targetOffsetY),
+        scaleX: easeOutQuad(current, beginScaleX, targetScaleX),
+        scaleY: easeOutQuad(current, beginScaleY, targetScaleY),
+        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1)
       });
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
@@ -223,7 +261,24 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   private handleTouch = async () => {
     while (true) {
       const { event, touches, changedTouches } = await this.touchEventManager.getNextUpdateEvent();
-      if (isSingleFinger(touches)) {
+      if (isSingleFinger(touches) && this.state.scaleX === 1 && this.state.scaleY === 1) {
+
+        const { moveX, moveY } = getMoveDistance(changedTouches);
+        const offsetX = this.state.offsetX + moveX;
+        const offsetY = this.state.offsetY + moveY;
+        const centerDistance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+
+        const exitCurrent = Math.max(0, Math.min(1, centerDistance / 200));
+
+        this.startAnimationFrame(() => {
+          this.setState({
+            ...this.state,
+            offsetX,
+            offsetY,
+            fadeInCurrent: 1 - exitCurrent
+          });
+        });
+      } else if (isSingleFinger(touches)) {
         // If only one finger touches
         const { moveX, moveY } = getMoveDistance(changedTouches);
         this.startAnimationFrame(() => {
@@ -257,7 +312,11 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
           });
         });
       } else {
-        this.stayWithinRange();
+        if (this.state.fadeInCurrent < 0.5) {
+          this.props.onClickBackButton(null);
+        } else {
+          this.stayWithinRange();
+        }
       }
       event.preventDefault();
     }
@@ -270,17 +329,20 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       mountNode,
       onClickBackButton
     } = this.props;
-    const appbar = (
+    const PureAppbar = pure(() => (
       <Appbar
         titleText='Seesee 图片查看器'
         color='#fff'
         leftIcon={<IconButton onClick={onClickBackButton} icon={<ArrawBack fill='#fff' />} />}
       />
-    );
+    ));
+    const PureBackground = pure(() => (
+      <span style={styles.bg} />
+    ));
     return ReactDOM.createPortal(
       <ViewerLayout
-        bg={<span ref={c => this.bgElement = c} style={styles.bg} />}
-        nav={appbar}
+        bg={<PureBackground/>}
+        nav={<PureAppbar />}
         fadeInCurrent={this.state.fadeInCurrent}
         style={{ ...styles.root, visibility: !this.state.display && 'hidden' }}
       >

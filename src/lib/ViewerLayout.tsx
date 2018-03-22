@@ -60,7 +60,8 @@ const styles: {[key: string]: React.CSSProperties} = {
     top: 0,
     left: 0,
     width: '100%',
-    height: '100%'
+    height: '100%',
+    willChange: 'opacity'
   },
   content: {
     flexGrow: 1,
@@ -75,7 +76,8 @@ const styles: {[key: string]: React.CSSProperties} = {
     top: 0,
     left: 0,
     width: '100%',
-    zIndex: 1
+    zIndex: 1,
+    willChange: 'transform'
   },
   footer: {
     flexShrink: 0,
