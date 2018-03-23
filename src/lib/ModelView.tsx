@@ -28,6 +28,7 @@ export interface ModelViewProps {
    */
   mountNode: HTMLElement;
   onClickBackButton?: React.ReactEventHandler<HTMLButtonElement>;
+  title?: string;
 }
 
 /**
@@ -333,7 +334,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     } = this.props;
     const PureAppbar = pure(() => (
       <Appbar
-        titleText='Seesee 图片查看器'
+        titleText={this.props.title}
         color='#fff'
         leftIcon={<IconButton onClick={onClickBackButton} icon={<ArrawBack fill='#fff' />} />}
       />
@@ -344,7 +345,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     return ReactDOM.createPortal(
       <ViewerLayout
         bg={<PureBackground/>}
-        nav={<PureAppbar />}
+        nav={this.props.title && <PureAppbar />}
         fadeInCurrent={this.state.fadeInCurrent}
         style={{ ...styles.root, visibility: !this.state.display && 'hidden' }}
       >

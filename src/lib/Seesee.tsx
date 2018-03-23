@@ -7,6 +7,7 @@ const modelViewMountNode = document.body;
 export interface SeeseeProps {
   open: boolean;
   onExit?: React.ReactEventHandler<HTMLButtonElement>;
+  title?: string;
 }
 
 export default class Seesee extends React.PureComponent<SeeseeProps> {
@@ -15,6 +16,7 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
     const {
       children,
       open,
+      title,
       onExit
     } = this.props;
     const onlyChild = React.Children.only(children);
@@ -31,6 +33,7 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
         <ModelView
           mountNode={modelViewMountNode}
           onClickBackButton={onExit}
+          title={title}
         >
           {open && overdrived}
         </ModelView>

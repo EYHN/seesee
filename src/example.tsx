@@ -19,39 +19,7 @@ class App extends React.PureComponent {
   public render() {
     return (
       <>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <Seesee open={this.state.open} onExit={() => this.setState({open: false})}>
+        <Seesee open={this.state.open} title={'Seesee.js'} onExit={() => this.setState({open: false})}>
           <img
             style={{background: '#000'}}
             onClick={this.handleClickImage}
@@ -59,23 +27,6 @@ class App extends React.PureComponent {
             width='200px'
           />
         </Seesee>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/>
-        <br/><br/>
-        <br/>
-        <br/>
-        <br/><br/>
-        <br/>
       </>
     );
   }
