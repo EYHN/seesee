@@ -37,7 +37,7 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
         >
           {open && overdrived}
         </ModelView>
-        {!open ? overdrived : React.cloneElement(children as any)}
+        {!open ? overdrived : React.cloneElement(children as any, {style: {opacity: 0}})}
       </>
     );
   }
