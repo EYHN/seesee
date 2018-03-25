@@ -267,9 +267,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         const { moveX, moveY } = getMoveDistance(changedTouches);
         const offsetX = this.state.offsetX + moveX;
         const offsetY = this.state.offsetY + moveY;
-        const centerDistance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);
+        const distance = Math.abs(offsetY);
 
-        const exitCurrent = Math.max(0, Math.min(1, centerDistance / 200));
+        const exitCurrent = Math.max(0, Math.min(1, distance / 200));
 
         this.startAnimationFrame(() => {
           this.setState({
