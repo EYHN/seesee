@@ -1,4 +1,4 @@
-import { Touches } from './TouchEventManager';
+import { Touches, TouchHistory } from './TouchEventManager';
 
 export function isSingleFinger(touches: Touches) {
   return touches.size === 1;
@@ -16,16 +16,50 @@ export function getFirstFinger(touches: Touches) {
   return touches.values().next().value;
 }
 
-export function getMoveDistance(changedTouches: Touches) {
-  let moveX = 0, moveY = 0;
-  for (const touchHistory of changedTouches.values()) {
+export function getMoveDistance(touches: Touches) {
+  let x = 0, y = 0;
+  for (const touchHistory of touches.values()) {
     if (touchHistory.length < 2) { continue; }
-    moveX += touchHistory[touchHistory.length - 1].touch.clientX - touchHistory[touchHistory.length - 2].touch.clientX;
-    moveY += touchHistory[touchHistory.length - 1].touch.clientY - touchHistory[touchHistory.length - 2].touch.clientY;
+    x += touchHistory[touchHistory.length - 1].touch.clientX - touchHistory[touchHistory.length - 2].touch.clientX;
+    y += touchHistory[touchHistory.length - 1].touch.clientY - touchHistory[touchHistory.length - 2].touch.clientY;
   }
-  moveX /= changedTouches.size;
-  moveY /= changedTouches.size;
-  return { moveX, moveY };
+  x /= touches.size;
+  y /= touches.size;
+  return { x, y, length: Math.sqrt(x * x + y * y) };
+}
+
+export function getDistanceFromStart(touches: Touches) {
+  let x = 0, y = 0;
+  for (const touchHistory of touches.values()) {
+    if (touchHistory.length < 2) { continue; }
+    x += touchHistory[touchHistory.length - 1].touch.clientX - touchHistory[0].touch.clientX;
+    y += touchHistory[touchHistory.length - 1].touch.clientY - touchHistory[0].touch.clientY;
+  }
+  x /= touches.size;
+  y /= touches.size;
+  return { x, y, length: Math.sqrt(x * x + y * y) };
+}
+
+export function getTotalDistanceMoved(touches: Touches) {
+  let length = 0;
+  for (const touchHistory of touches.values()) {
+    if (touchHistory.length < 2) { continue; }
+    for (let index = 1; index < touchHistory.length; index++) {
+      const x = touchHistory[index].touch.clientX - touchHistory[index - 1].touch.clientX;
+      const y = touchHistory[index].touch.clientY - touchHistory[index - 1].touch.clientY;
+      length += Math.sqrt(x * x + y * y);
+    }
+  }
+  return length;
+}
+
+export function getCurrentTime(touch: TouchHistory) {
+  let currentTime = 0;
+  for (let index = 1; index < touch.length; index++) {
+    currentTime += touch[index - 1].time - touch[index].time;
+  }
+  currentTime += Date.now() - touch[touch.length - 1].time;
+  return currentTime;
 }
 
 export function getTouchesCenter(touches: Touch[]) {

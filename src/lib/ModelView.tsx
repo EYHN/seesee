@@ -15,7 +15,9 @@ import {
   getScaling,
   isMultipleFingers,
   getTouchesCenter,
-  getTouches
+  getTouches,
+  getDistanceFromStart,
+  getTotalDistanceMoved
 } from '../utils/touch/filter';
 import { pure } from 'recompose';
 
@@ -263,57 +265,62 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     while (true) {
       const { event, touches, changedTouches } = await this.touchEventManager.getNextUpdateEvent();
       if (isSingleFinger(touches) && this.state.scaleX === 1 && this.state.scaleY === 1) {
+        if (getTotalDistanceMoved(changedTouches) > 5) {
+          const { x, y } = getMoveDistance(changedTouches);
+          const offsetX = this.state.offsetX + x;
+          const offsetY = this.state.offsetY + y;
+          const distance = Math.abs(offsetY);
 
-        const { moveX, moveY } = getMoveDistance(changedTouches);
-        const offsetX = this.state.offsetX + moveX;
-        const offsetY = this.state.offsetY + moveY;
-        const distance = Math.abs(offsetY);
+          const exitCurrent = Math.max(0, Math.min(1, distance / 200));
 
-        const exitCurrent = Math.max(0, Math.min(1, distance / 200));
-
-        this.startAnimationFrame(() => {
-          this.setState({
-            ...this.state,
-            offsetX,
-            offsetY,
-            fadeInCurrent: 1 - exitCurrent
+          this.startAnimationFrame(() => {
+            this.setState({
+              ...this.state,
+              offsetX,
+              offsetY,
+              fadeInCurrent: 1 - exitCurrent
+            });
           });
-        });
+        }
+
       } else if (isSingleFinger(touches)) {
         // If only one finger touches
-        const { moveX, moveY } = getMoveDistance(changedTouches);
-        this.startAnimationFrame(() => {
-          this.setState({
-            ...this.state,
-            offsetX: this.state.offsetX + moveX,
-            offsetY: this.state.offsetY + moveY,
-            fadeInCurrent: 1
+        if (getTotalDistanceMoved(changedTouches) > 5) {
+          const { x, y } = getMoveDistance(changedTouches);
+          this.startAnimationFrame(() => {
+            this.setState({
+              ...this.state,
+              offsetX: this.state.offsetX + x,
+              offsetY: this.state.offsetY + y,
+              fadeInCurrent: 1
+            });
           });
-        });
+        }
       } else if (isMultipleFingers(touches)) {
         // If there are multiple fingers touching.
+        if (getTotalDistanceMoved(changedTouches) > 5) {
+          const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
+          const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
 
-        const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
-        const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
+          // Fingers scaling.
+          const scalingRatio = getScaling(touches);
+          const { x: centerX, y: centerY } = getTouchesCenter(getTouches(touches));
 
-        // Fingers scaling.
-        const scalingRatio = getScaling(touches);
-        const { x: centerX, y: centerY } = getTouchesCenter(getTouches(touches));
+          const centerOffsetX = -(centerX - (clientWidth / 2)) * (scalingRatio - 1) * this.state.scaleX;
+          const centerOffsetY = -(centerY - (clientHeight / 2)) * (scalingRatio - 1) * this.state.scaleY;
 
-        const centerOffsetX = -(centerX - (clientWidth / 2)) * (scalingRatio - 1) * this.state.scaleX;
-        const centerOffsetY = -(centerY - (clientHeight / 2)) * (scalingRatio - 1) * this.state.scaleY;
-
-        const { moveX, moveY } = getMoveDistance(changedTouches);
-        this.startAnimationFrame(() => {
-          this.setState({
-            ...this.state,
-            scaleX: this.state.scaleX * scalingRatio,
-            scaleY: this.state.scaleY * scalingRatio,
-            offsetX: this.state.offsetX + moveX + centerOffsetX,
-            offsetY: this.state.offsetY + moveY + centerOffsetY,
-            fadeInCurrent: 1
+          const { x, y } = getMoveDistance(changedTouches);
+          this.startAnimationFrame(() => {
+            this.setState({
+              ...this.state,
+              scaleX: this.state.scaleX * scalingRatio,
+              scaleY: this.state.scaleY * scalingRatio,
+              offsetX: this.state.offsetX + x + centerOffsetX,
+              offsetY: this.state.offsetY + y + centerOffsetY,
+              fadeInCurrent: 1
+            });
           });
-        });
+        }
       } else {
         if (this.state.fadeInCurrent < 0.5) {
           this.props.onClickBackButton(null);
@@ -344,7 +351,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     ));
     return ReactDOM.createPortal(
       <ViewerLayout
-        bg={<PureBackground/>}
+        bg={<PureBackground />}
         nav={this.props.title && <PureAppbar />}
         fadeInCurrent={this.state.fadeInCurrent}
         style={{ ...styles.root, visibility: !this.state.display && 'hidden' }}
