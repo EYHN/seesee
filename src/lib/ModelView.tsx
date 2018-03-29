@@ -17,7 +17,8 @@ import {
   getTouchesCenter,
   getTouches,
   getDistanceFromStart,
-  getTotalDistanceMoved
+  getTotalDistanceMoved,
+  isSingleTap
 } from '../utils/touch/filter';
 import { pure } from 'recompose';
 
@@ -89,6 +90,46 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
 
   onClose() {
     this.beginFadeOutAnimation();
+  }
+
+  enlarge(x: number, y: number) {
+    const startTime = Date.now();
+    const scale = 3;
+    const childrenElement = this.contentLayoutElement.firstElementChild;
+    const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
+    const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
+    const {width, height} = childrenElement.getBoundingClientRect();
+    x = Math.max(0, Math.min(width, x)) - width / 2;
+    y = Math.max(0, Math.min(height, y)) - height / 2;
+    const maxOffsetX = width * scale / 2 - clientWidth / 2;
+    const maxOffsetY = height * scale / 2 - clientHeight / 2;
+    const targetOffsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, x * -1 * scale));
+    const targetOffsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, y * -1 * scale));
+
+    // The animation duration milliseconds.
+    const duration = 200;
+
+    const {
+      offsetX: beginOffsetX,
+      offsetY: beginOffsetY,
+      scaleX: beginScaleX,
+      scaleY: beginScaleY,
+      fadeInCurrent: beginFadeInCurrent } = this.state;
+    const update = () => {
+      const current = Math.min((Date.now() - startTime) / duration, 1);
+      this.setState({
+        ...this.state,
+        offsetX: easeOutQuad(current, beginOffsetX, targetOffsetX),
+        offsetY: easeOutQuad(current, beginOffsetY, targetOffsetY),
+        scaleX: easeOutQuad(current, beginScaleX, scale),
+        scaleY: easeOutQuad(current, beginScaleY, scale),
+        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1)
+      });
+      if (current !== 1) {
+        this.contentAnimationRequest = requestAnimationFrame(update);
+      }
+    };
+    this.startAnimationFrame(update);
   }
 
   public beginFadeInAnimation = () => {
@@ -262,9 +303,11 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   }
 
   private handleTouch = async () => {
+    let lastTapDate = 0;
     while (true) {
       const { event, touches, changedTouches } = await this.touchEventManager.getNextUpdateEvent();
-      if (isSingleFinger(touches) && this.state.scaleX === 1 && this.state.scaleY === 1) {
+
+      if (event.type === 'touchmove' && isSingleFinger(touches) && this.state.scaleX === 1 && this.state.scaleY === 1) {
         if (getTotalDistanceMoved(changedTouches) > 5) {
           const { x, y } = getMoveDistance(changedTouches);
           const offsetX = this.state.offsetX + x;
@@ -283,7 +326,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
           });
         }
 
-      } else if (isSingleFinger(touches)) {
+      } else if (event.type === 'touchmove' && isSingleFinger(touches)) {
         // If only one finger touches
         if (getTotalDistanceMoved(changedTouches) > 5) {
           const { x, y } = getMoveDistance(changedTouches);
@@ -296,7 +339,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
             });
           });
         }
-      } else if (isMultipleFingers(touches)) {
+      } else if (event.type === 'touchmove' && isMultipleFingers(touches)) {
         // If there are multiple fingers touching.
         if (getTotalDistanceMoved(changedTouches) > 5) {
           const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
@@ -321,6 +364,20 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
             });
           });
         }
+      } else if (isSingleTap(touches, changedTouches)) {
+        if (Date.now() - lastTapDate < 300) {
+          // dooble tap
+          if (this.state.scaleX === 1 && this.state.scaleY === 1) {
+            const { x, y } = getTouchesCenter(getTouches(changedTouches));
+            const childrenElement = this.contentLayoutElement.firstElementChild;
+            const clientRect = childrenElement.getBoundingClientRect();
+
+            this.enlarge(x - clientRect.left, y - clientRect.top);
+          } else {
+            this.returnOrigin();
+          }
+        }
+        lastTapDate = Date.now();
       } else {
         if (this.state.fadeInCurrent < 0.5) {
           this.props.onClickBackButton(null);
@@ -328,6 +385,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
           this.stayWithinRange();
         }
       }
+
       event.preventDefault();
     }
   }

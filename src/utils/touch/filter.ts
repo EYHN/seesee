@@ -1,4 +1,4 @@
-import { Touches, TouchHistory } from './TouchEventManager';
+import { Touches, TouchHistory, TOUCH_TYPE_END } from './TouchEventManager';
 
 export function isSingleFinger(touches: Touches) {
   return touches.size === 1;
@@ -10,6 +10,20 @@ export function isTwoFingers(touches: Touches) {
 
 export function isMultipleFingers(touches: Touches) {
   return touches.size > 1;
+}
+
+export function isEnded(touch: TouchHistory) {
+  return touch[touch.length - 1].type === TOUCH_TYPE_END;
+}
+
+export function isSingleTap(touches: Touches, changeTouches: Touches) {
+  if (touches.size === 0 && changeTouches.size === 1) {
+    const finger = getFirstFinger(changeTouches);
+    if (isEnded(finger)) {
+      return getTotalDistanceMoved(changeTouches) < 5;
+    }
+  }
+  return false;
 }
 
 export function getFirstFinger(touches: Touches) {
@@ -28,6 +42,9 @@ export function getMoveDistance(touches: Touches) {
   return { x, y, length: Math.sqrt(x * x + y * y) };
 }
 
+/**
+ * 获取所有手指当前位置距离起点距离的平均值
+ */
 export function getDistanceFromStart(touches: Touches) {
   let x = 0, y = 0;
   for (const touchHistory of touches.values()) {
@@ -40,6 +57,9 @@ export function getDistanceFromStart(touches: Touches) {
   return { x, y, length: Math.sqrt(x * x + y * y) };
 }
 
+/**
+ * 获取所有手指总共移动距离的平均值
+ */
 export function getTotalDistanceMoved(touches: Touches) {
   let length = 0;
   for (const touchHistory of touches.values()) {

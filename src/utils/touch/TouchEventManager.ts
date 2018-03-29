@@ -1,4 +1,12 @@
-export type TouchHistoryItem = {time: number; touch: Touch};
+export const TOUCH_TYPE_MOVE = 'move';
+export const TOUCH_TYPE_END = 'end';
+export const TOUCH_TYPE_START = 'start';
+
+export type TouchHistoryItem = {
+  time: number;
+  touch: Touch;
+  type: typeof TOUCH_TYPE_MOVE | typeof TOUCH_TYPE_START | typeof TOUCH_TYPE_END;
+};
 
 export type TouchHistory = TouchHistoryItem[];
 
@@ -34,7 +42,7 @@ export default class TouchEventManager {
     const changedTouches: Touches = new Map();
     if (e.changedTouches && e.changedTouches.length > 0) {
       Array.prototype.forEach.call(e.changedTouches, (changedTouch: Touch) => {
-        this.touches.set(changedTouch.identifier, [{time: Date.now(), touch: changedTouch}]);
+        this.touches.set(changedTouch.identifier, [{time: Date.now(), touch: changedTouch, type: TOUCH_TYPE_START}]);
         changedTouches.set(changedTouch.identifier, this.touches.get(changedTouch.identifier));
       });
     }
@@ -49,7 +57,7 @@ export default class TouchEventManager {
     const changedTouches: Touches = new Map();
     if (e.changedTouches && e.changedTouches.length > 0) {
       Array.prototype.forEach.call(e.changedTouches, (changedTouch: Touch) => {
-        this.touches.get(changedTouch.identifier).push({time: Date.now(), touch: changedTouch});
+        this.touches.get(changedTouch.identifier).push({time: Date.now(), touch: changedTouch, type: TOUCH_TYPE_MOVE});
         changedTouches.set(changedTouch.identifier, this.touches.get(changedTouch.identifier));
       });
     }
@@ -64,7 +72,7 @@ export default class TouchEventManager {
     const changedTouches: Touches = new Map();
     if (e.changedTouches && e.changedTouches.length > 0) {
       Array.prototype.forEach.call(e.changedTouches, (changedTouch: Touch) => {
-        this.touches.get(changedTouch.identifier).push({time: Date.now(), touch: changedTouch});
+        this.touches.get(changedTouch.identifier).push({time: Date.now(), touch: changedTouch, type: TOUCH_TYPE_END});
         changedTouches.set(changedTouch.identifier, this.touches.get(changedTouch.identifier));
         this.touches.delete(changedTouch.identifier);
       });
