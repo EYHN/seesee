@@ -14,9 +14,9 @@ export interface OverdriveProps {
    */
   duration?: number;
   /**
-   * Delay milliseconds before the animation.
+   * Delay before the animation.
    */
-  animationDelay?: number;
+  animationDelay?: boolean;
   /**
    * Prevent browsers from scrolling.
    */
@@ -44,10 +44,10 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
   };
 
   bodyElement: HTMLDivElement;
-  animationDelayTimeout: number;
   animationRequest: number;
   element: HTMLElement;
   onShowLock: boolean;
+  onAnimateDelay: boolean;
 
   constructor(props: OverdriveProps) {
     super(props);
@@ -99,9 +99,6 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
     const startAnimation = (element: HTMLElement) => {
       const beginDate = Date.now();
       const prevOverflow = document.body.style.overflow;
-      // if (lockscroll) {
-      //   document.body.style.overflow = 'hidden';
-      // }
       const animationUpdate = () => {
         const currentTime = Date.now() - beginDate;
         const current = currentTime / duration;
@@ -115,9 +112,6 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
         if (current < 1) {
           this.animationRequest = requestAnimationFrame(animationUpdate);
         } else {
-          // if (lockscroll) {
-          //   document.body.style.overflow = prevOverflow;
-          // }
           this.animateEnd();
         }
       };
@@ -131,13 +125,15 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
         opacity: 1,
         zIndex: 1001,
         transform: 'scaleX(1) scaleY(1) translateX(0px) translateY(0px)',
-        transformOrigin: '0 0 0'
+        transformOrigin: '0 0 0',
+        willChange: 'transform'
       },
       ref: (c) => startAnimation(c)
     }), bodyElement);
   }
 
   animateEnd = () => {
+    this.onAnimateDelay = false;
     this.setState({ loading: false });
     if (this.props.onAnimationEnd) {
       this.props.onAnimationEnd();
@@ -176,14 +172,22 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
     const { id, animationDelay } = this.props;
     if (components[id]) {
       const { prevPosition, prevElement } = components[id];
-      components[id] = null;
       if (animationDelay) {
-        this.animationDelayTimeout = setTimeout(this.animate.bind(this, prevPosition, prevElement), animationDelay);
+        this.onAnimateDelay = true;
+        this.onShowLock = false;
       } else {
+        components[id] = null;
         this.animate(prevPosition, prevElement);
       }
     } else {
       this.setState({ loading: false });
+    }
+  }
+
+  componentDidUpdate() {
+    if (!this.props.animationDelay && this.onAnimateDelay === true) {
+      this.onAnimateDelay = false;
+      this.onShow();
     }
   }
 
@@ -192,7 +196,6 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
   }
 
   clearAnimations() {
-    clearTimeout(this.animationDelayTimeout);
     cancelAnimationFrame(this.animationRequest);
   }
 
@@ -226,7 +229,7 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
       ...onlyChild.props.style,
       ...style,
       opacity: (this.state.loading ? 0 : 1),
-      willChange: 'opacity, transform'
+      willChange: 'opacity'
     };
 
     return React.cloneElement(

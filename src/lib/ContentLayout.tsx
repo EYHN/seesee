@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { shallowEqual } from 'recompose';
 
 function squareWithSigned(x: number) {
   return x < 0 ? -Math.pow(x, 2) : Math.pow(x, 2);
@@ -20,19 +21,52 @@ export interface ContentLayoutProps {
 
 export default class ContentLayout extends React.PureComponent<ContentLayoutProps> {
   prevTouchList: TouchList;
+  rootElement: HTMLElement;
 
-  // s: 'height' | 'width';
+  state = {
+    childrenReady: false,
+    childrenRatio: 1,
+    childrenWidth: '',
+    childrenHeight: '',
+    onAnimation: false
+  };
 
-  // componentDidMount() {
-  //   window.addEventListener('resize', this.handleWindowResize);
-  // }
+  componentDidMount() {
+    window.addEventListener('resize', this.handleWindowResize);
+  }
 
-  // componentWillUnmount() {
-  //   window.removeEventListener('resize', this.handleWindowResize);
-  // }
+  componentWillUnmount() {
+    window.removeEventListener('resize', this.handleWindowResize);
+  }
+
+  private handleWindowResize = (e: UIEvent) => {
+    if (this.state.childrenReady) {
+      const {height, width} = this.getChildrenSize(this.state.childrenRatio);
+      this.setState({
+        ...this.state,
+        childrenHeight: height,
+        childrenWidth: width
+      });
+    }
+  }
+
+  private updateChildrenRatio() {
+    if (!this.rootElement) { return; }
+    const rect = this.rootElement.firstElementChild.getBoundingClientRect();
+    const ratio = rect.width / rect.height;
+    const {height, width} = this.getChildrenSize(ratio);
+    this.setState({
+      ...this.state,
+      childrenReady: true,
+      childrenRatio: ratio,
+      childrenHeight: height,
+      childrenWidth: width
+    });
+  }
 
   private handleRef: React.Ref<HTMLElement> = (el) => {
     if (!el) { return; }
+    this.rootElement = el;
     el.addEventListener('touchstart', this.props.onTouchStart, { passive: false });
     el.addEventListener('touchend', this.props.onTouchEnd, { passive: false });
     el.addEventListener('touchmove', this.props.onTouchMove, { passive: false });
@@ -40,6 +74,20 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     if (typeof this.props.rootref === 'function') {
       this.props.rootref(el);
     }
+  }
+
+  private getChildrenSize(ratio: number) {
+    const clientHeight = this.rootElement.getBoundingClientRect().height;
+    const clientWidth = this.rootElement.getBoundingClientRect().width;
+    const clientRatio = clientWidth / clientHeight;
+    const childrenRatio = ratio;
+    return clientRatio > childrenRatio ? {
+      height: '100vh',
+      width: 'auto'
+    } : {
+      width: '100vw',
+      height: 'auto'
+    };
   }
 
   // tslint:disable-next-line:member-ordering
@@ -60,10 +108,17 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
           ...(childrenProps as any).props.style,
           maxHeight: '100%',
           maxWidth: '100%',
-          width: '100vh',
-          // tslint:disable-next-line:max-line-length
+          width: this.state.childrenWidth,
+          height: this.state.childrenHeight,
           transform: `matrix(${scaleX}, 0, 0, ${scaleY}, ${offsetX}, ${offsetY})`
-        }
+        },
+        onLoad: (...args: any[]) => {
+          this.updateChildrenRatio();
+          if (typeof (childrenProps.props as any).onLoad === 'function') {
+            (childrenProps.props as any).onLoad(...args);
+          }
+        },
+        animationDelay: !this.state.childrenReady
       });
       return (
         <div

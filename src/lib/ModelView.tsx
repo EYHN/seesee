@@ -45,9 +45,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   contentLayoutElement: HTMLElement;
   touchEventManager: TouchEventManager = new TouchEventManager();
   state = {
-    fadeInCurrent: 0,
-    hasShow: false,
-    display: false,
+    fadeInCurrent: !!this.props.children ? 1 : 0,
+    hasShow: !!this.props.children,
+    display: !!this.props.children,
     offsetX: 0,
     offsetY: 0,
     scaleX: 1,
@@ -98,13 +98,13 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     const childrenElement = this.contentLayoutElement.firstElementChild;
     const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
     const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
-    const {width, height} = childrenElement.getBoundingClientRect();
+    const { width, height } = childrenElement.getBoundingClientRect();
     x = Math.max(0, Math.min(width, x)) - width / 2;
     y = Math.max(0, Math.min(height, y)) - height / 2;
     const maxOffsetX = width * scale / 2 - clientWidth / 2;
     const maxOffsetY = height * scale / 2 - clientHeight / 2;
-    const targetOffsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, x * -1 * scale));
-    const targetOffsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, y * -1 * scale));
+    const OffsetX = width * scale > clientWidth ? Math.max(-maxOffsetX, Math.min(maxOffsetX, x * -1 * scale)) : 0;
+    const OffsetY = height * scale > clientHeight ? Math.max(-maxOffsetY, Math.min(maxOffsetY, y * -1 * scale)) : 0;
 
     // The animation duration milliseconds.
     const duration = 200;
@@ -119,8 +119,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
         ...this.state,
-        offsetX: easeOutQuad(current, beginOffsetX, targetOffsetX),
-        offsetY: easeOutQuad(current, beginOffsetY, targetOffsetY),
+        offsetX: easeOutQuad(current, beginOffsetX, OffsetX),
+        offsetY: easeOutQuad(current, beginOffsetY, OffsetY),
         scaleX: easeOutQuad(current, beginScaleX, scale),
         scaleY: easeOutQuad(current, beginScaleY, scale),
         fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1)
@@ -389,7 +389,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       event.preventDefault();
     }
   }
-
+  private handleContentRootRef = (el: HTMLElement) => this.contentLayoutElement = el;
   // tslint:disable-next-line:member-ordering
   public render() {
     const {
@@ -407,6 +407,22 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     const PureBackground = pure(() => (
       <span style={styles.bg} />
     ));
+    const content = children && (
+      <ContentLayout
+        enable
+        onTouchCancel={this.touchEventManager.handleTouchEvent}
+        onTouchEnd={this.touchEventManager.handleTouchEvent}
+        onTouchMove={this.touchEventManager.handleTouchEvent}
+        onTouchStart={this.touchEventManager.handleTouchEvent}
+        rootref={this.handleContentRootRef}
+        scaleX={this.state.scaleX}
+        scaleY={this.state.scaleY}
+        offsetX={this.state.offsetX}
+        offsetY={this.state.offsetY}
+      >
+        {children}
+      </ContentLayout>
+    );
     return ReactDOM.createPortal(
       <ViewerLayout
         bg={<PureBackground />}
@@ -414,20 +430,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         fadeInCurrent={this.state.fadeInCurrent}
         style={{ ...styles.root, visibility: !this.state.display && 'hidden' }}
       >
-        <ContentLayout
-          enable
-          onTouchCancel={this.touchEventManager.handleTouchEvent}
-          onTouchEnd={this.touchEventManager.handleTouchEvent}
-          onTouchMove={this.touchEventManager.handleTouchEvent}
-          onTouchStart={this.touchEventManager.handleTouchEvent}
-          rootref={(el) => this.contentLayoutElement = el}
-          scaleX={this.state.scaleX}
-          scaleY={this.state.scaleY}
-          offsetX={this.state.offsetX}
-          offsetY={this.state.offsetY}
-        >
-          {children}
-        </ContentLayout>
+        {content}
       </ViewerLayout>,
       mountNode
     );

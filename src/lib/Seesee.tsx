@@ -1,6 +1,7 @@
 import * as React from 'react';
 import ModelView from './ModelView';
 import Overdrive from '../Components/Overdrive';
+import randomString from '../utils/randomString';
 
 const modelViewMountNode = document.body;
 
@@ -11,6 +12,8 @@ export interface SeeseeProps {
 }
 
 export default class Seesee extends React.PureComponent<SeeseeProps> {
+
+  public overdriveID = randomString();
 
   public render() {
     const {
@@ -24,7 +27,7 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
       return null;
     }
     const overdrived = (
-      <Overdrive id={'1'} duration={350}>
+      <Overdrive id={this.overdriveID} duration={350}>
         {children}
       </Overdrive>
     );
@@ -38,7 +41,9 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
           {open && overdrived}
         </ModelView>
         {!open ? overdrived : React.cloneElement(children as any, {style: {opacity: 0}})}
+        {open && <style>{'body {overflow: hidden}'}</style>}
       </>
     );
   }
 }
+//
