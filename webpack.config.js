@@ -1,13 +1,7 @@
 var webpack = require('webpack');
 var path = require('path');
-var uglifyJsPlugin = webpack.optimize.UglifyJsPlugin;
 
 var HtmlWebpackPlugin = require('html-webpack-plugin');
-
-const GLOBALS = {
-    'process.env.NODE_ENV': JSON.stringify('development'),
-    __DEV__: true
-};
 
 var HtmlWebpackConfig = {
     title: 'seesee',
@@ -20,9 +14,8 @@ var HtmlWebpackConfig = {
 
 
 module.exports = {
-    entry: [
-        "./src/example.tsx"
-    ],
+    mode: "development",
+    entry: "./src/example.tsx",
     output: {
         filename: "seesee.js",
         path: __dirname + "/example",
@@ -32,7 +25,6 @@ module.exports = {
     devtool: "source-map",
 
     plugins: [
-        new webpack.DefinePlugin(GLOBALS),
         new HtmlWebpackPlugin(HtmlWebpackConfig)
     ],
 
@@ -47,9 +39,11 @@ module.exports = {
                 test: /\.(ts|tsx)?$/,
                 use: [
                     {
-                        loader: "awesome-typescript-loader",
+                        loader: "ts-loader",
                         options: {
-                            useBabel: true
+                            compilerOptions: {
+                                "declaration": false
+                            }
                         }
                     }
                 ]
@@ -58,7 +52,7 @@ module.exports = {
     },
     devServer: {
         port: process.env.PORT || 8888,
-        host: '0.0.0.0',
+        host: '127.0.0.1',
         publicPath: '/',
         contentBase: './src',
         historyApiFallback: true,

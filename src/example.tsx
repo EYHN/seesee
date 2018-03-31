@@ -43,6 +43,7 @@ class App extends React.PureComponent {
             width='200px'
           />
         </Seesee>
+        <br/>
         <Seesee open={this.state.open2} title={'Seesee.js'} onExit={() => this.setState({open2: false})}>
           <img
             style={{background: '#000'}}
@@ -51,12 +52,13 @@ class App extends React.PureComponent {
             width='200px'
           />
         </Seesee>
+        <br/>
         <Seesee open={this.state.open3} title={'Seesee.js'} onExit={() => this.setState({open3: false})}>
           <img
             style={{background: '#000'}}
             onClick={this.handleClickImage3}
             src={exampleImage3}
-            width='200px'
+            width='50px'
           />
         </Seesee>
       </>

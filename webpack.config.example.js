@@ -1,14 +1,8 @@
 var webpack = require('webpack');
 var path = require('path');
-var uglifyJsPlugin = webpack.optimize.UglifyJsPlugin;
 
 
 var HtmlWebpackPlugin = require('html-webpack-plugin');
-
-const GLOBALS = {
-    'process.env.NODE_ENV': JSON.stringify('production'),
-    __DEV__: true
-};
 
 var HtmlWebpackConfig = {
     title: 'seesee',
@@ -33,6 +27,7 @@ var HtmlWebpackConfig = {
 
 
 module.exports = {
+    mode: "production",
     entry: [
         "./src/example.tsx"
     ],
@@ -45,9 +40,7 @@ module.exports = {
     devtool: "source-map",
 
     plugins: [
-        new webpack.DefinePlugin(GLOBALS),
-        new HtmlWebpackPlugin(HtmlWebpackConfig),
-        new webpack.optimize.UglifyJsPlugin({ sourceMap: true })
+        new HtmlWebpackPlugin(HtmlWebpackConfig)
     ],
 
     resolve: {
@@ -61,9 +54,11 @@ module.exports = {
                 test: /\.(ts|tsx)?$/,
                 use: [
                     {
-                        loader: "awesome-typescript-loader",
+                        loader: "ts-loader",
                         options: {
-                            useBabel: true
+                            compilerOptions: {
+                                "declaration": false
+                            }
                         }
                     }
                 ]
