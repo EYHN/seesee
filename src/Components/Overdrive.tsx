@@ -227,10 +227,13 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
 
     const newStyle: React.CSSProperties = {
       ...onlyChild.props.style,
-      ...style,
-      opacity: (this.state.loading ? 0 : 1),
-      willChange: 'opacity'
+      ...style
     };
+
+    if (this.state.loading) {
+      newStyle.willChange = 'opacity';
+      newStyle.opacity = 0;
+    }
 
     return React.cloneElement(
       onlyChild,

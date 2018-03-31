@@ -21,6 +21,7 @@ import {
   isSingleTap
 } from '../utils/touch/filter';
 import { pure } from 'recompose';
+import debounce from '../utils/debounce';
 
 export interface ModelViewProps {
   /**
@@ -51,7 +52,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     offsetX: 0,
     offsetY: 0,
     scaleX: 1,
-    scaleY: 1
+    scaleY: 1,
+    willChange: false
   };
 
   constructor(props: ModelViewProps) {
@@ -127,6 +129,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       });
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
+      } else {
+        this.endAnimationFrame();
       }
     };
     this.startAnimationFrame(update);
@@ -138,7 +142,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     }
     const beginFadeInCurrent = this.state.fadeInCurrent;
     const beginDate = Date.now();
-    const duration = 250;
+    const duration = 200;
     const animationUpdate = () => {
       const currentTime = Date.now() - beginDate;
       const current = easeOutCubic(currentTime / duration, beginFadeInCurrent, 1);
@@ -161,7 +165,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     }
     const beginFadeInCurrent = this.state.fadeInCurrent;
     const beginDate = Date.now();
-    const duration = 250;
+    const duration = 200;
     const animationUpdate = () => {
       const currentTime = Date.now() - beginDate;
       const current = easeOutCubic(currentTime / duration, beginFadeInCurrent, 0);
@@ -189,7 +193,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       offsetX: 0,
       offsetY: 0,
       scaleX: 1,
-      scaleY: 1
+      scaleY: 1,
+      willChange: false
     });
   }
 
@@ -220,6 +225,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       });
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
+      } else {
+        this.endAnimationFrame();
       }
     };
     this.startAnimationFrame(update);
@@ -229,7 +236,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     const startTime = Date.now();
 
     // The animation duration milliseconds.
-    const duration = 200;
+    const duration = 150;
 
     const childrenElement = this.contentLayoutElement.firstElementChild;
     const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
@@ -290,6 +297,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       });
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
+      } else {
+        this.endAnimationFrame();
       }
     };
     this.startAnimationFrame(update);
@@ -300,7 +309,35 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       cancelAnimationFrame(this.contentAnimationRequest);
     }
     this.contentAnimationRequest = requestAnimationFrame(c);
+    this.willChange();
   }
+
+  private endAnimationFrame = () => {
+    this.contentAnimationRequest = undefined;
+    this.willNotChange();
+  }
+
+  private willChange = () => {
+    if (!this.state.willChange) {
+      this.setState({
+        ...this.state,
+        willChange: true
+      });
+    }
+  }
+
+  /**
+   * @function
+   */
+  // tslint:disable-next-line:member-ordering
+  private willNotChange = debounce(() => {
+    if (this.state.willChange) {
+      this.setState({
+        ...this.state,
+        willChange: false
+      });
+    }
+  }, 100);
 
   private handleTouch = async () => {
     let lastTapDate = 0;
@@ -323,6 +360,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
               offsetY,
               fadeInCurrent: 1 - exitCurrent
             });
+            this.endAnimationFrame();
           });
         }
 
@@ -337,6 +375,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
               offsetY: this.state.offsetY + y,
               fadeInCurrent: 1
             });
+            this.endAnimationFrame();
           });
         }
       } else if (event.type === 'touchmove' && isMultipleFingers(touches)) {
@@ -362,6 +401,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
               offsetY: this.state.offsetY + y + centerOffsetY,
               fadeInCurrent: 1
             });
+            this.endAnimationFrame();
           });
         }
       } else if (isSingleTap(touches, changedTouches)) {
@@ -385,10 +425,10 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
           this.stayWithinRange();
         }
       }
-
       event.preventDefault();
     }
   }
+
   private handleContentRootRef = (el: HTMLElement) => this.contentLayoutElement = el;
   // tslint:disable-next-line:member-ordering
   public render() {
@@ -419,6 +459,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         scaleY={this.state.scaleY}
         offsetX={this.state.offsetX}
         offsetY={this.state.offsetY}
+        willChange={this.state.willChange}
       >
         {children}
       </ContentLayout>

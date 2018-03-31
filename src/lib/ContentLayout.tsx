@@ -17,6 +17,7 @@ export interface ContentLayoutProps {
   scaleY?: number;
   offsetX?: number;
   offsetY?: number;
+  willChange?: boolean;
 }
 
 export default class ContentLayout extends React.PureComponent<ContentLayoutProps> {
@@ -98,20 +99,28 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       scaleX = 0,
       scaleY = 0,
       offsetX = 0,
-      offsetY = 0
+      offsetY = 0,
+      willChange = false
     } = this.props;
     if (!childrenProps) { return <div style={styles.root} />; }
+    const childrenStyle: React.CSSProperties = {
+      ...(childrenProps as any).props.style,
+      maxWidth: '100%',
+      transform: `matrix(${scaleX}, 0, 0, ${scaleY}, ${offsetX}, ${offsetY})`
+    };
+    if (this.state.childrenWidth && this.state.childrenHeight) {
+      childrenStyle.width = this.state.childrenWidth;
+      childrenStyle.maxWidth = '100%';
+      childrenStyle.height = this.state.childrenHeight;
+      childrenStyle.maxHeight = '100%';
+    }
+    if (willChange) {
+      childrenStyle.willChange = 'transform';
+    }
     React.Children.only(childrenProps);
     if (React.isValidElement(childrenProps)) {
       const children = React.cloneElement(childrenProps as any, {
-        style: {
-          ...(childrenProps as any).props.style,
-          maxHeight: '100%',
-          maxWidth: '100%',
-          width: this.state.childrenWidth,
-          height: this.state.childrenHeight,
-          transform: `matrix(${scaleX}, 0, 0, ${scaleY}, ${offsetX}, ${offsetY})`
-        },
+        style: childrenStyle,
         onLoad: (...args: any[]) => {
           this.updateChildrenRatio();
           if (typeof (childrenProps.props as any).onLoad === 'function') {

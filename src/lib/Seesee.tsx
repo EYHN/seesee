@@ -27,7 +27,7 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
       return null;
     }
     const overdrived = (
-      <Overdrive id={this.overdriveID} duration={350}>
+      <Overdrive id={this.overdriveID} duration={300}>
         {children}
       </Overdrive>
     );
