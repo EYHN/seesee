@@ -2,12 +2,11 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import ViewerLayout from './ViewerLayout';
 import ContentLayout from './ContentLayout';
-import { easeOutCubic, easeInCubic } from '../utils/easing';
+import { easeOutCubic, easeOutQuad } from '../utils/easing';
 import Appbar from '../Components/Appbar';
 import IconButton from '../Components/Icons/IconButton';
 import ArrawBack from '../Components/Icons/ArrawBack';
 import TouchEventManager from '../utils/touch/TouchEventManager';
-import { easeOutQuad, lerp, easeOutBack } from '../utils/easing';
 import {
   isSingleFinger,
   getFirstFinger,
@@ -16,10 +15,8 @@ import {
   isMultipleFingers,
   getTouchesCenter,
   getTouches,
-  getDistanceFromStart,
   getTotalDistanceMoved,
   isSingleTap,
-  getSlidingAngle,
   isHorizontal
 } from '../utils/touch/filter';
 import { pure } from 'recompose';
@@ -472,7 +469,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       if (event.type === 'touchmove' && isSingleFinger(touches) && this.state.scaleX <= 1 && this.state.scaleY <= 1) {
         if (getTotalDistanceMoved(changedTouches) > 5) {
           if (isHorizontal(getFirstFinger(touches))) {
-            const { x, y } = getMoveDistance(changedTouches);
+            const { x } = getMoveDistance(changedTouches);
             const maxScale = 0.5;
             const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
             const progress = Math.max(-1, Math.min(1,

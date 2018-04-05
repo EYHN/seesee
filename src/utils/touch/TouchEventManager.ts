@@ -90,7 +90,7 @@ export default class TouchEventManager {
 
   readonly getNextUpdateEvent = () => new Promise<{ event: TouchEvent; touches: Touches; changedTouches: Touches }>(
     (resolve) => {
-      const listener: UpdateEventLinstener = (e, touches, changedTouches) => {
+      const listener: UpdateEventLinstener = (event, touches, changedTouches) => {
         const res = { event, touches, changedTouches };
         resolve(res as any);
         this.removeUpdateEventListener(listener);

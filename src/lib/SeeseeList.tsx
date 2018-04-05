@@ -13,21 +13,6 @@ export interface SeeseeListProps {
 }
 
 export default class SeeseeList extends React.PureComponent<SeeseeListProps> {
-  private findSeeseeInChildren(identifier: string, children: React.ReactChildren | React.ReactChild[]) {
-    let res: React.ReactElement<SeeseeProps>;
-    React.Children.forEach(children, (child: React.ReactElement<SeeseeProps>) => {
-      if (React.isValidElement(child) && child.type === Seesee) {
-        if ((child).props.identifier === identifier) {
-          res = child;
-        }
-      }
-    });
-    if (typeof res === 'undefined') {
-      throw Error(`an't find <Seesee/> by identifier(${identifier}).`);
-    }
-    return res;
-  }
-
   // tslint:disable-next-line:member-ordering
   public render() {
     const {

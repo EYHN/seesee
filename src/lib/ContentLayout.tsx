@@ -1,10 +1,6 @@
 import * as React from 'react';
 import Overdrive from '../Components/Overdrive';
 
-function squareWithSigned(x: number) {
-  return x < 0 ? -Math.pow(x, 2) : Math.pow(x, 2);
-}
-
 export interface ContentLayoutProps {
   enable: boolean;
   style?: React.CSSProperties;

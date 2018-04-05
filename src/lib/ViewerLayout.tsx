@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { easeInOutQuad } from '../utils/easing';
 
 export interface ViewerLayoutProps {
   style?: React.CSSProperties;

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import ModelView from './ModelView';
 import Overdrive from '../Components/Overdrive';
-import randomString from '../utils/randomString';
 import SeeseeList from './SeeseeList';
 
 const modelViewMountNode = document.body;

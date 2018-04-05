@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import { lerp, easeOutQuad, easeInQuad, easeOutBack } from '../utils/easing';
+import { easeOutBack } from '../utils/easing';
 
 export interface OverdriveProps {
   id: string | number;
@@ -54,7 +54,7 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
   }
 
   animate(prevPosition: OverdrivePosition, prevElement: React.ReactElement<any>) {
-    const { duration = 200, lockscroll = true } = this.props;
+    const { duration = 200 } = this.props;
 
     prevPosition.top += (window.pageYOffset || document.documentElement.scrollTop);
     const nextPosition = this.getPosition(true);
@@ -98,7 +98,6 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
 
     const startAnimation = (element: HTMLElement) => {
       const beginDate = Date.now();
-      const prevOverflow = document.body.style.overflow;
       const animationUpdate = () => {
         const currentTime = Date.now() - beginDate;
         const current = currentTime / duration;

@@ -12,6 +12,7 @@
         "target": "es6",
         "jsx": "react",
         "experimentalDecorators": true,
+        "noUnusedLocals": true,
         "typeRoots": [
             "./node_modules/@types"
         ]
