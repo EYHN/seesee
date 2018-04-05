@@ -31,9 +31,11 @@
     "webpack-dev-server": "3.1.1"
   },
   "dependencies": {
+    "@types/react-tap-event-plugin": "^0.0.30",
     "react": "16.2.0",
     "react-dom": "16.2.0",
     "react-overdrive": "^0.0.9",
+    "react-tap-event-plugin": "^3.0.2",
     "recompose": "0.26.0"
   }
 }

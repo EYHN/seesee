@@ -3,6 +3,15 @@ import SeeseeList from './lib/SeeseeList';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
+declare module 'react' {
+  interface DOMAttributes<T> {
+      onTouchTap?: React.EventHandler<React.TouchEvent<T>>;
+  }
+}
+
+import * as injectTapEventPlugin from 'react-tap-event-plugin';
+injectTapEventPlugin();
+
 const exampleImage = require('file-loader!./example.jpg');
 const exampleImage2 = require('file-loader!./example2.jpg');
 const exampleImage3 = require('file-loader!./example3.jpg');
@@ -14,19 +23,19 @@ class App extends React.PureComponent {
     openList: undefined as string,
     open4: false
   };
-  handleClickImage: React.MouseEventHandler<HTMLImageElement> = (e) => {
+  handleClickImage: React.EventHandler<React.TouchEvent<HTMLImageElement>> = (e) => {
     this.setState((prevState) => ({
       ...prevState,
       openList: '1'
     }));
   }
-  handleClickImage2: React.MouseEventHandler<HTMLImageElement> = (e) => {
+  handleClickImage2: React.EventHandler<React.TouchEvent<HTMLImageElement>> = (e) => {
     this.setState((prevState) => ({
       ...prevState,
       openList: '2'
     }));
   }
-  handleClickImage3: React.MouseEventHandler<HTMLImageElement> = (e) => {
+  handleClickImage3: React.EventHandler<React.TouchEvent<HTMLImageElement>> = (e) => {
     this.setState((prevState) => ({
       ...prevState,
       openList: '3'
@@ -66,7 +75,7 @@ class App extends React.PureComponent {
           <Seesee title={'EYHN'} identifier={'1'}>
             <img
               style={{ background: '#000' }}
-              onClick={this.handleClickImage}
+              onTouchTap={this.handleClickImage}
               src={exampleImage}
               width='200px'
             />
@@ -75,7 +84,7 @@ class App extends React.PureComponent {
           <Seesee title={'K-on'} identifier={'2'}>
             <img
               style={{ background: '#000' }}
-              onClick={this.handleClickImage2}
+              onTouchTap={this.handleClickImage2}
               src={exampleImage2}
               width='200px'
             />
@@ -84,7 +93,7 @@ class App extends React.PureComponent {
           <Seesee title={'DuRaRaRa!!'} identifier={'3'}>
             <img
               style={{ background: '#000' }}
-              onClick={this.handleClickImage3}
+              onTouchTap={this.handleClickImage3}
               src={exampleImage3}
               width='50px'
             />
