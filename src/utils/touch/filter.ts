@@ -26,6 +26,21 @@ export function isSingleTap(touches: Touches, changeTouches: Touches) {
   return false;
 }
 
+export function getSlidingAngle(touch: TouchHistory) {
+  const touchStart = touch[0].touch;
+  const touchEnd = touch[5 > touch.length - 1 ? touch.length - 1 : 5].touch;
+
+  const x = touchStart.clientX - touchEnd.clientX;
+  const y = touchStart.clientY - touchEnd.clientY;
+  const angle = Math.atan2(y, x) * 180 / Math.PI;
+  return ((touchStart.clientY < touchEnd.clientY ? 360 + angle : angle) + 270) % 360;
+}
+
+export function isHorizontal(touch: TouchHistory) {
+  const angle = getSlidingAngle(touch);
+  return (angle > 60 && angle < 120) || (angle > 240 && angle < 300);
+}
+
 export function getFirstFinger(touches: Touches) {
   return touches.values().next().value;
 }

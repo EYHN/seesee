@@ -36,7 +36,7 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
-dist
+/dist
 
 .awcache
 
@@ -44,6 +44,6 @@ dist
 
 .vscode
 
-example
+/example
 
-lib
+/lib

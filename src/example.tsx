@@ -1,4 +1,5 @@
 import Seesee from './lib/Seesee';
+import SeeseeList from './lib/SeeseeList';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 
@@ -10,32 +11,52 @@ const MOUNT_NODE = document.getElementById('app');
 
 class App extends React.PureComponent {
   state = {
-    open: false,
-    open2: false,
-    open3: false
+    openList: 1 as number
   };
   handleClickImage: React.MouseEventHandler<HTMLImageElement> = (e) => {
     this.setState((prevState) => ({
       ...prevState,
-      open: true
+      openList: 1
     }));
   }
   handleClickImage2: React.MouseEventHandler<HTMLImageElement> = (e) => {
     this.setState((prevState) => ({
       ...prevState,
-      open2: true
+      openList: 2
     }));
   }
   handleClickImage3: React.MouseEventHandler<HTMLImageElement> = (e) => {
     this.setState((prevState) => ({
       ...prevState,
-      open3: true
+      openList: 3
     }));
   }
+
+  handleExit: React.ReactEventHandler<HTMLButtonElement> = (e) => {
+    this.setState((prevState) => ({
+      ...prevState,
+      openList: undefined
+    }));
+  }
+
+  handleNext = () => {
+    this.setState((prevState) => ({
+      ...prevState,
+      openList: this.state.openList + 1
+    }));
+  }
+
+  handlePrev = () => {
+    this.setState((prevState) => ({
+      ...prevState,
+      openList: this.state.openList - 1
+    }));
+  }
+
   public render() {
     return (
-      <>
-        <Seesee open={this.state.open} title={'Seesee.js'} onExit={() => this.setState({open: false})}>
+      <SeeseeList open={this.state.openList} onExit={this.handleExit} onNext={this.handleNext} onPrev={this.handlePrev}>
+        <Seesee title={'Seesee.js'} identifier={1}>
           <img
             style={{background: '#000'}}
             onClick={this.handleClickImage}
@@ -43,8 +64,7 @@ class App extends React.PureComponent {
             width='200px'
           />
         </Seesee>
-        <br/>
-        <Seesee open={this.state.open2} title={'Seesee.js'} onExit={() => this.setState({open2: false})}>
+        <Seesee title={'Seesee.js'} identifier={2}>
           <img
             style={{background: '#000'}}
             onClick={this.handleClickImage2}
@@ -52,8 +72,7 @@ class App extends React.PureComponent {
             width='200px'
           />
         </Seesee>
-        <br/>
-        <Seesee open={this.state.open3} title={'Seesee.js'} onExit={() => this.setState({open3: false})}>
+        <Seesee title={'Seesee.js'} identifier={3}>
           <img
             style={{background: '#000'}}
             onClick={this.handleClickImage3}
@@ -61,7 +80,7 @@ class App extends React.PureComponent {
             width='50px'
           />
         </Seesee>
-      </>
+      </SeeseeList>
     );
   }
 }

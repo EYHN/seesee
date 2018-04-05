@@ -3,7 +3,7 @@ import * as ReactDOM from 'react-dom';
 import { lerp, easeOutQuad, easeInQuad, easeOutBack } from '../utils/easing';
 
 export interface OverdriveProps {
-  id: string;
+  id: string | number;
   /**
    * The event of animation end.
    */

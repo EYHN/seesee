@@ -6,6 +6,8 @@ export interface ViewerLayoutProps {
   nav?: React.ReactNode;
   content?: React.ReactNode;
   bottom?: React.ReactNode;
+  next?: React.ReactNode;
+  prev?: React.ReactNode;
   bg?: React.ReactNode;
   className?: string;
   fadeInCurrent?: number;
@@ -20,6 +22,8 @@ const ViewerLayout: React.SFC<ViewerLayoutProps> = ({
   children,
   nav,
   content,
+  next,
+  prev,
   bottom,
   bg,
   style,
@@ -38,8 +42,14 @@ const ViewerLayout: React.SFC<ViewerLayoutProps> = ({
     <div style={{...styles.root, ...style}} className={className}>
       <div role='background' style={backgroundStyle}>{bg}</div>
       <nav style={navStyle}>{nav}</nav>
+      <div style={{...styles.onTouch, ...styles.content}} role='next-content'>
+        {next}
+      </div>
       <div style={styles.content} role='content'>
         {children}
+      </div>
+      <div style={{...styles.onTouch, ...styles.content}} role='prev-content'>
+        {prev}
       </div>
       <footer style={styles.footer}>{bottom}</footer>
     </div>
@@ -64,8 +74,7 @@ const styles: {[key: string]: React.CSSProperties} = {
     willChange: 'opacity'
   },
   content: {
-    flexGrow: 1,
-    flexShrink: 1,
+    position: 'absolute',
     width: '100%',
     height: '100%',
     zIndex: 0
@@ -86,5 +95,9 @@ const styles: {[key: string]: React.CSSProperties} = {
     left: 0,
     width: '100%',
     zIndex: 1
+  },
+  onTouch: {
+    touchAction: 'none',
+    pointerEvents: 'none'
   }
 };

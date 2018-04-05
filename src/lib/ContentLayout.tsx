@@ -14,8 +14,9 @@ export interface ContentLayoutProps {
   rootref?: React.Ref<HTMLElement>;
   scaleX?: number;
   scaleY?: number;
-  offsetX?: number;
-  offsetY?: number;
+  offsetX?: string;
+  offsetY?: string;
+  opacity?: number;
   willChange?: boolean;
 }
 
@@ -27,9 +28,26 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     childrenReady: false,
     childrenRatio: 1,
     childrenWidth: '',
-    childrenHeight: '',
-    onAnimation: false
+    childrenHeight: ''
   };
+
+  constructor(props: ContentLayoutProps) {
+    super(props);
+    this.state = {
+      ...this.state
+    };
+  }
+
+  componentWillReceiveProps(nextProps: { children: React.ReactNode } & ContentLayoutProps) {
+    if (nextProps.children !== this.props.children) {
+      this.setState({
+        childrenReady: false,
+        childrenRatio: 1,
+        childrenWidth: '',
+        childrenHeight: ''
+      });
+    }
+  }
 
   componentDidMount() {
     window.addEventListener('resize', this.handleWindowResize);
@@ -41,7 +59,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
 
   private handleWindowResize = (e: UIEvent) => {
     if (this.state.childrenReady) {
-      const {height, width} = this.getChildrenSize(this.state.childrenRatio);
+      const { height, width } = this.getChildrenSize(this.state.childrenRatio);
       this.setState({
         ...this.state,
         childrenHeight: height,
@@ -54,7 +72,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     if (!this.rootElement) { return; }
     const rect = this.rootElement.firstElementChild.getBoundingClientRect();
     const ratio = rect.width / rect.height;
-    const {height, width} = this.getChildrenSize(ratio);
+    const { height, width } = this.getChildrenSize(ratio);
     this.setState({
       ...this.state,
       childrenReady: true,
@@ -85,9 +103,9 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       height: '100vh',
       width: 'auto'
     } : {
-      width: '100vw',
-      height: 'auto'
-    };
+        width: '100vw',
+        height: 'auto'
+      };
   }
 
   // tslint:disable-next-line:member-ordering
@@ -95,29 +113,34 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     const {
       children: childrenProps,
       style: styleProp,
-      scaleX = 0,
-      scaleY = 0,
-      offsetX = 0,
-      offsetY = 0,
+      scaleX = 1,
+      scaleY = 1,
+      offsetX = '0px',
+      offsetY = '0px',
+      opacity = 1,
       willChange = false
     } = this.props;
     if (!childrenProps) { return <div style={styles.root} />; }
-    const childrenStyle: React.CSSProperties = {
-      ...(childrenProps as any).props.style,
-      maxWidth: '100%',
-      transform: `matrix(${scaleX}, 0, 0, ${scaleY}, ${offsetX}, ${offsetY})`
-    };
-    if (this.state.childrenWidth && this.state.childrenHeight) {
-      childrenStyle.width = this.state.childrenWidth;
-      childrenStyle.maxWidth = '100%';
-      childrenStyle.height = this.state.childrenHeight;
-      childrenStyle.maxHeight = '100%';
-    }
-    if (willChange) {
-      childrenStyle.willChange = 'transform';
-    }
     React.Children.only(childrenProps);
     if (React.isValidElement(childrenProps)) {
+      const childrenStyle: React.CSSProperties = {
+        opacity,
+        ...(childrenProps as any).props.style
+      };
+      if (this.state.childrenReady) {
+        childrenStyle.transform = `scale(${scaleX}, ${scaleY}) ` +
+          `translate(${offsetX}, ${offsetY})`;
+        childrenStyle.maxWidth = '100%';
+      }
+      if (this.state.childrenWidth && this.state.childrenHeight) {
+        childrenStyle.width = this.state.childrenWidth;
+        childrenStyle.maxWidth = '100%';
+        childrenStyle.height = this.state.childrenHeight;
+        childrenStyle.maxHeight = '100%';
+      }
+      if (willChange) {
+        childrenStyle.willChange = 'transform, opacity';
+      }
       const children = React.cloneElement(childrenProps as any, {
         style: childrenStyle,
         onLoad: (...args: any[]) => {

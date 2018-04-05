@@ -18,7 +18,9 @@ import {
   getTouches,
   getDistanceFromStart,
   getTotalDistanceMoved,
-  isSingleTap
+  isSingleTap,
+  getSlidingAngle,
+  isHorizontal
 } from '../utils/touch/filter';
 import { pure } from 'recompose';
 import debounce from '../utils/debounce';
@@ -33,6 +35,11 @@ export interface ModelViewProps {
   mountNode: HTMLElement;
   onClickBackButton?: React.ReactEventHandler<HTMLButtonElement>;
   title?: string;
+
+  next?: React.ReactElement<any>;
+  prev?: React.ReactElement<any>;
+  onNext?: (next: React.ReactElement<any>) => void;
+  onPrev?: (prev: React.ReactElement<any>) => void;
 }
 
 /**
@@ -53,6 +60,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     offsetY: 0,
     scaleX: 1,
     scaleY: 1,
+    opacity: 1,
+    switchProgress: 0,
     willChange: false
   };
 
@@ -82,6 +91,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       } else {
         this.onClose();
       }
+    }
+    if (this.state.hasShow && nextProps.children !== this.props.children) {
+      this.resetTransform();
     }
   }
 
@@ -116,7 +128,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       offsetY: beginOffsetY,
       scaleX: beginScaleX,
       scaleY: beginScaleY,
-      fadeInCurrent: beginFadeInCurrent } = this.state;
+      fadeInCurrent: beginFadeInCurrent,
+      opacity: beginOpacity,
+      switchProgress: beginSwitchProgress } = this.state;
     const update = () => {
       const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
@@ -125,7 +139,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         offsetY: easeOutQuad(current, beginOffsetY, OffsetY),
         scaleX: easeOutQuad(current, beginScaleX, scale),
         scaleY: easeOutQuad(current, beginScaleY, scale),
-        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1)
+        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1),
+        opacity: easeOutQuad(current, beginOpacity, 1),
+        switchProgress: easeOutQuad(current, beginSwitchProgress, 0)
       });
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
@@ -194,7 +210,25 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       offsetY: 0,
       scaleX: 1,
       scaleY: 1,
+      opacity: 1,
+      switchProgress: 0,
       willChange: false
+    });
+  }
+
+  /**
+   * force reset the transform.
+   */
+  public resetTransform() {
+    this.setState({
+      ...this.state,
+      fadeInCurrent: 1,
+      offsetX: 0,
+      offsetY: 0,
+      scaleX: 1,
+      scaleY: 1,
+      opacity: 1,
+      switchProgress: 0
     });
   }
 
@@ -212,7 +246,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       offsetY: beginOffsetY,
       scaleX: beginScaleX,
       scaleY: beginScaleY,
-      fadeInCurrent: beginFadeInCurrent } = this.state;
+      fadeInCurrent: beginFadeInCurrent,
+      opacity: beginOpacity,
+      switchProgress: beginSwitchProgress } = this.state;
     const update = () => {
       const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
@@ -221,7 +257,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         offsetY: easeOutQuad(current, beginOffsetY, 0),
         scaleX: easeOutQuad(current, beginScaleX, 1),
         scaleY: easeOutQuad(current, beginScaleY, 1),
-        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1)
+        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1),
+        opacity: easeOutQuad(current, beginOpacity, 1),
+        switchProgress: easeOutQuad(current, beginSwitchProgress, 0)
       });
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
@@ -251,7 +289,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       offsetY: beginOffsetY,
       scaleX: beginScaleX,
       scaleY: beginScaleY,
-      fadeInCurrent: beginFadeInCurrent } = this.state;
+      fadeInCurrent: beginFadeInCurrent,
+      opacity: beginOpacity,
+      switchProgress: beginSwitchProgress } = this.state;
     let targetOffsetX = 0, targetOffsetY = 0, targetScaleX = beginScaleX, targetScaleY = beginScaleY;
     if (left > 0 && right > 0 || left + right > 0) {
       targetOffsetX = 0;
@@ -293,12 +333,95 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         offsetY: easeOutQuad(current, beginOffsetY, targetOffsetY),
         scaleX: easeOutQuad(current, beginScaleX, targetScaleX),
         scaleY: easeOutQuad(current, beginScaleY, targetScaleY),
-        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1)
+        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1),
+        opacity: easeOutQuad(current, beginOpacity, 1),
+        switchProgress: easeOutQuad(current, beginSwitchProgress, 0)
       });
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
       } else {
         this.endAnimationFrame();
+      }
+    };
+    this.startAnimationFrame(update);
+  }
+
+  public next() {
+    if (!this.props.next) { return; }
+    const {
+      offsetX: beginOffsetX,
+      offsetY: beginOffsetY,
+      scaleX: beginScaleX,
+      scaleY: beginScaleY,
+      fadeInCurrent: beginFadeInCurrent,
+      opacity: beginOpacity,
+      switchProgress: beginSwitchProgress } = this.state;
+    const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
+
+    const startTime = Date.now();
+
+    // The animation duration milliseconds.
+    const duration = 150;
+
+    const update = () => {
+      const current = Math.min((Date.now() - startTime) / duration, 1);
+      this.setState({
+        ...this.state,
+        offsetX: easeOutQuad(current, beginOffsetX, -clientWidth),
+        offsetY: easeOutQuad(current, beginOffsetY, 0),
+        scaleX: easeOutQuad(current, beginScaleX, 1),
+        scaleY: easeOutQuad(current, beginScaleY, 1),
+        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1),
+        opacity: easeOutQuad(current, beginOpacity, 1),
+        switchProgress: easeOutQuad(current, beginSwitchProgress, 1)
+      });
+      if (current !== 1) {
+        this.contentAnimationRequest = requestAnimationFrame(update);
+      } else {
+        this.endAnimationFrame();
+        if (typeof this.props.onNext === 'function') {
+          this.props.onNext(this.props.next);
+        }
+      }
+    };
+    this.startAnimationFrame(update);
+  }
+
+  public prev() {
+    if (!this.props.prev) { return; }
+    const {
+      offsetX: beginOffsetX,
+      offsetY: beginOffsetY,
+      scaleX: beginScaleX,
+      scaleY: beginScaleY,
+      fadeInCurrent: beginFadeInCurrent,
+      opacity: beginOpacity,
+      switchProgress: beginSwitchProgress } = this.state;
+
+    const startTime = Date.now();
+
+    // The animation duration milliseconds.
+    const duration = 150;
+
+    const update = () => {
+      const current = Math.min((Date.now() - startTime) / duration, 1);
+      this.setState({
+        ...this.state,
+        offsetX: easeOutQuad(current, beginOffsetX, 0),
+        offsetY: easeOutQuad(current, beginOffsetY, 0),
+        scaleX: easeOutQuad(current, beginScaleX, 0.5),
+        scaleY: easeOutQuad(current, beginScaleY, 0.5),
+        fadeInCurrent: easeOutQuad(current, beginFadeInCurrent, 1),
+        opacity: easeOutQuad(current, beginOpacity, 0),
+        switchProgress: easeOutQuad(current, beginSwitchProgress, -1)
+      });
+      if (current !== 1) {
+        this.contentAnimationRequest = requestAnimationFrame(update);
+      } else {
+        this.endAnimationFrame();
+        if (typeof this.props.onPrev === 'function') {
+          this.props.onPrev(this.props.prev);
+        }
       }
     };
     this.startAnimationFrame(update);
@@ -343,27 +466,51 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     let lastTapDate = 0;
     while (true) {
       const { event, touches, changedTouches } = await this.touchEventManager.getNextUpdateEvent();
-
-      if (event.type === 'touchmove' && isSingleFinger(touches) && this.state.scaleX === 1 && this.state.scaleY === 1) {
+      if (event.type === 'touchmove' && isSingleFinger(touches) && this.state.scaleX <= 1 && this.state.scaleY <= 1) {
         if (getTotalDistanceMoved(changedTouches) > 5) {
-          const { x, y } = getMoveDistance(changedTouches);
-          const offsetX = this.state.offsetX + x;
-          const offsetY = this.state.offsetY + y;
-          const distance = Math.abs(offsetY);
-
-          const exitCurrent = Math.max(0, Math.min(1, distance / 200));
-
-          this.startAnimationFrame(() => {
-            this.setState({
-              ...this.state,
-              offsetX,
-              offsetY,
-              fadeInCurrent: 1 - exitCurrent
+          if (isHorizontal(getFirstFinger(touches))) {
+            const { x, y } = getMoveDistance(changedTouches);
+            const maxScale = 0.5;
+            const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
+            const progress = Math.max(-1, Math.min(1,
+              -1 * (this.state.offsetX / clientWidth) -
+              (1 - this.state.scaleX) / (1 - maxScale) +
+              -1 * x / clientWidth
+            ));
+            this.startAnimationFrame(() => {
+              this.setState({
+                ...this.state,
+                offsetX: progress > 0 ? -1 * progress * clientWidth : 0,
+                offsetY: 0,
+                scaleX: progress < 0 ? 1 - Math.abs(progress) * (1 - maxScale) : 1,
+                scaleY: progress < 0 ? 1 - Math.abs(progress) * (1 - maxScale) : 1,
+                fadeInCurrent: 1,
+                opacity: progress < 0 ? 1 - Math.abs(progress) : 1,
+                switchProgress: progress
+              });
+              this.endAnimationFrame();
             });
-            this.endAnimationFrame();
-          });
-        }
+          } else {
+            const { x, y } = getMoveDistance(changedTouches);
+            const offsetX = this.state.offsetX + x;
+            const offsetY = this.state.offsetY + y;
+            const distance = Math.abs(offsetY);
 
+            const exitCurrent = Math.max(0, Math.min(1, distance / 200));
+
+            this.startAnimationFrame(() => {
+              this.setState({
+                ...this.state,
+                offsetX,
+                offsetY,
+                fadeInCurrent: 1 - exitCurrent,
+                opacity: 1,
+                switchProgress: 0
+              });
+              this.endAnimationFrame();
+            });
+          }
+        }
       } else if (event.type === 'touchmove' && isSingleFinger(touches)) {
         // If only one finger touches
         if (getTotalDistanceMoved(changedTouches) > 5) {
@@ -373,7 +520,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
               ...this.state,
               offsetX: this.state.offsetX + x,
               offsetY: this.state.offsetY + y,
-              fadeInCurrent: 1
+              fadeInCurrent: 1,
+              opacity: 1,
+              switchProgress: 0
             });
             this.endAnimationFrame();
           });
@@ -399,7 +548,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
               scaleY: this.state.scaleY * scalingRatio,
               offsetX: this.state.offsetX + x + centerOffsetX,
               offsetY: this.state.offsetY + y + centerOffsetY,
-              fadeInCurrent: 1
+              fadeInCurrent: 1,
+              opacity: 1,
+              switchProgress: 0
             });
             this.endAnimationFrame();
           });
@@ -419,7 +570,11 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         }
         lastTapDate = Date.now();
       } else {
-        if (this.state.fadeInCurrent < 0.5) {
+        if (this.state.switchProgress < -0.5) {
+          this.prev();
+        } else if (this.state.switchProgress > 0.5) {
+          this.next();
+        } else if (this.state.fadeInCurrent < 0.5) {
           this.props.onClickBackButton(null);
         } else {
           this.stayWithinRange();
@@ -435,7 +590,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     const {
       children,
       mountNode,
-      onClickBackButton
+      onClickBackButton,
+      next: nextProp,
+      prev: prevProp
     } = this.props;
     const PureAppbar = pure(() => (
       <Appbar
@@ -457,11 +614,33 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         rootref={this.handleContentRootRef}
         scaleX={this.state.scaleX}
         scaleY={this.state.scaleY}
-        offsetX={this.state.offsetX}
-        offsetY={this.state.offsetY}
+        offsetX={this.state.offsetX + 'px'}
+        offsetY={this.state.offsetY + 'px'}
         willChange={this.state.willChange}
+        opacity={this.state.opacity}
       >
         {children}
+      </ContentLayout>
+    );
+    const next = nextProp && (
+      <ContentLayout
+        enable
+        scaleX={0.5 + Math.abs(this.state.switchProgress) * (1 - 0.5)}
+        scaleY={0.5 + Math.abs(this.state.switchProgress) * (1 - 0.5)}
+        willChange={this.state.switchProgress > 0}
+        opacity={this.state.switchProgress}
+      >
+        {nextProp}
+      </ContentLayout>
+    );
+    const prev = prevProp && (
+      <ContentLayout
+        enable
+        offsetX={(-1 - this.state.switchProgress) * 100 + '%'}
+        opacity={this.state.switchProgress < 0 ? 1 : 0}
+        willChange={this.state.switchProgress < 0}
+      >
+        {prevProp}
       </ContentLayout>
     );
     return ReactDOM.createPortal(
@@ -469,6 +648,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         bg={<PureBackground />}
         nav={this.props.title && <PureAppbar />}
         fadeInCurrent={this.state.fadeInCurrent}
+        next={next}
+        prev={prev}
         style={{ ...styles.root, visibility: !this.state.display && 'hidden' }}
       >
         {content}
