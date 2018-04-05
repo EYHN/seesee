@@ -11,7 +11,7 @@ export interface SeeseeProps {
   onExit?: React.ReactEventHandler<HTMLButtonElement>;
   title?: string;
   parent?: SeeseeList;
-  identifier?: string | number;
+  identifier?: string;
 }
 
 export default class Seesee extends React.PureComponent<SeeseeProps> {
@@ -52,6 +52,7 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
       <ModelView
         mountNode={modelViewMountNode}
         onClickBackButton={onExit}
+        identifier={identifier}
         title={title}
       >
         {open && overdrived}

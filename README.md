@@ -26,7 +26,7 @@
 <ul>
     <li><del>Double-tap to zoom in and out.</del></li>
     <li>Shortcuts, mouse drag and scroll wheel zoom for desktop user.</li>
-    <li>Swipe horizontally to switch between pictures.</li>
+    <li><del>Swipe horizontally to switch between pictures.</del></li>
     <li>Compatible with other components, not only image.</li>
     <li>A video player with simple control interface.</li>
     <li>Transplant to preact.</li>

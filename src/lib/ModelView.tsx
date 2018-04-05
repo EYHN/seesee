@@ -38,6 +38,9 @@ export interface ModelViewProps {
 
   next?: React.ReactElement<any>;
   prev?: React.ReactElement<any>;
+  nextIdentifier?: string;
+  prevIdentifier?: string;
+  identifier?: string;
   onNext?: (next: React.ReactElement<any>) => void;
   onPrev?: (prev: React.ReactElement<any>) => void;
 }
@@ -570,9 +573,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         }
         lastTapDate = Date.now();
       } else {
-        if (this.state.switchProgress < -0.5) {
+        if (this.props.prev && this.state.switchProgress < -0.5) {
           this.prev();
-        } else if (this.state.switchProgress > 0.5) {
+        } else if (this.props.next && this.state.switchProgress > 0.5) {
           this.next();
         } else if (this.state.fadeInCurrent < 0.5) {
           this.props.onClickBackButton(null);
@@ -592,7 +595,10 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       mountNode,
       onClickBackButton,
       next: nextProp,
-      prev: prevProp
+      prev: prevProp,
+      prevIdentifier,
+      nextIdentifier,
+      identifier
     } = this.props;
     const PureAppbar = pure(() => (
       <Appbar
@@ -618,6 +624,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         offsetY={this.state.offsetY + 'px'}
         willChange={this.state.willChange}
         opacity={this.state.opacity}
+        identifier={identifier}
       >
         {children}
       </ContentLayout>
@@ -629,6 +636,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         scaleY={0.5 + Math.abs(this.state.switchProgress) * (1 - 0.5)}
         willChange={this.state.switchProgress > 0}
         opacity={this.state.switchProgress}
+        identifier={nextIdentifier}
       >
         {nextProp}
       </ContentLayout>
@@ -639,6 +647,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         offsetX={(-1 - this.state.switchProgress) * 100 + '%'}
         opacity={this.state.switchProgress < 0 ? 1 : 0}
         willChange={this.state.switchProgress < 0}
+        identifier={prevIdentifier}
       >
         {prevProp}
       </ContentLayout>

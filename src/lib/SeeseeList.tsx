@@ -6,14 +6,14 @@ import Overdrive from '../Components/Overdrive';
 const modelViewMountNode = document.body;
 
 export interface SeeseeListProps {
-  open: string | number;
+  open: string;
   onNext?: () => void;
   onPrev?: () => void;
   onExit?: React.ReactEventHandler<HTMLButtonElement>;
 }
 
 export default class SeeseeList extends React.PureComponent<SeeseeListProps> {
-  private findSeeseeInChildren(identifier: string | number, children: React.ReactChildren | React.ReactChild[]) {
+  private findSeeseeInChildren(identifier: string, children: React.ReactChildren | React.ReactChild[]) {
     let res: React.ReactElement<SeeseeProps>;
     React.Children.forEach(children, (child: React.ReactElement<SeeseeProps>) => {
       if (React.isValidElement(child) && child.type === Seesee) {
@@ -38,10 +38,16 @@ export default class SeeseeList extends React.PureComponent<SeeseeListProps> {
       onPrev
     } = this.props;
     let targetIndex: number;
+    let prevIndex: number;
+    let nextIndex: number;
     const children = React.Children.map(childrenProps, (child: React.ReactElement<SeeseeProps>, index) => {
       if (React.isValidElement(child) && child.type === Seesee) {
-        if (child.props.identifier === open) {
+        if (child.props.identifier === open && typeof targetIndex === 'undefined') {
           targetIndex = index;
+        } else if (typeof targetIndex === 'undefined') {
+          prevIndex = index;
+        } else if (typeof targetIndex !== 'undefined' && typeof nextIndex === 'undefined') {
+          nextIndex = index;
         }
         const c = React.cloneElement(child as React.ReactElement<any>, {
           ...child.props,
@@ -55,9 +61,12 @@ export default class SeeseeList extends React.PureComponent<SeeseeListProps> {
     });
     const now: React.ReactElement<SeeseeProps> = children[targetIndex];
     const next: React.ReactElement<SeeseeProps> =
-      children[targetIndex + 1] ? children[targetIndex + 1].props.children : undefined;
+      children[nextIndex] ? children[nextIndex].props.children : undefined;
+    const nextIdentifier = children[nextIndex] ? children[nextIndex].props.identifier : undefined;
+
     const prev: React.ReactElement<SeeseeProps> =
-      children[targetIndex - 1] ? children[targetIndex - 1].props.children : undefined;
+      children[prevIndex] ? children[prevIndex].props.children : undefined;
+    const prevIdentifier = children[prevIndex] ? children[prevIndex].props.identifier : undefined;
     const overdrived = (
       <Overdrive id={open} duration={300}>
         {now && (now as any).props.children}
@@ -72,6 +81,9 @@ export default class SeeseeList extends React.PureComponent<SeeseeListProps> {
           title={now ? now.props.title : ''}
           next={next}
           prev={prev}
+          identifier={open}
+          nextIdentifier={nextIdentifier}
+          prevIdentifier={prevIdentifier}
           onNext={onNext}
           onPrev={onPrev}
         >

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import Overdrive from '../Components/Overdrive';
 
 function squareWithSigned(x: number) {
   return x < 0 ? -Math.pow(x, 2) : Math.pow(x, 2);
@@ -18,7 +19,14 @@ export interface ContentLayoutProps {
   offsetY?: string;
   opacity?: number;
   willChange?: boolean;
+  identifier?: string;
 }
+
+const ratioCache: Map<string, {
+  childrenRatio: number;
+  childrenWidth: string;
+  childrenHeight: string;
+}> = new Map();
 
 export default class ContentLayout extends React.PureComponent<ContentLayoutProps> {
   prevTouchList: TouchList;
@@ -34,7 +42,8 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
   constructor(props: ContentLayoutProps) {
     super(props);
     this.state = {
-      ...this.state
+      ...this.state,
+      ...this.findCache(props.identifier)
     };
   }
 
@@ -44,7 +53,8 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         childrenReady: false,
         childrenRatio: 1,
         childrenWidth: '',
-        childrenHeight: ''
+        childrenHeight: '',
+        ...this.findCache(nextProps.identifier)
       });
     }
   }
@@ -58,6 +68,12 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
   }
 
   private handleWindowResize = (e: UIEvent) => {
+    if (this.state.childrenReady) {
+      this.updateSize();
+    }
+  }
+
+  private updateSize = () => {
     if (this.state.childrenReady) {
       const { height, width } = this.getChildrenSize(this.state.childrenRatio);
       this.setState({
@@ -80,6 +96,22 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       childrenHeight: height,
       childrenWidth: width
     });
+    if (this.props.identifier) {
+      ratioCache.set(this.props.identifier, {
+        childrenRatio: ratio,
+        childrenHeight: height,
+        childrenWidth: width
+      });
+    }
+  }
+
+  private findCache(identifier: string) {
+    const style = ratioCache.get(identifier);
+    if (typeof style !== 'object') { return; }
+    return {
+      childrenReady: true,
+      ...style
+    };
   }
 
   private handleRef: React.Ref<HTMLElement> = (el) => {
@@ -128,8 +160,8 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         ...(childrenProps as any).props.style
       };
       if (this.state.childrenReady) {
-        childrenStyle.transform = `scale(${scaleX}, ${scaleY}) ` +
-          `translate(${offsetX}, ${offsetY})`;
+        childrenStyle.transform = `translate(${offsetX}, ${offsetY})` +
+          `scale(${scaleX}, ${scaleY}) `;
         childrenStyle.maxWidth = '100%';
       }
       if (this.state.childrenWidth && this.state.childrenHeight) {
@@ -144,12 +176,17 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       const children = React.cloneElement(childrenProps as any, {
         style: childrenStyle,
         onLoad: (...args: any[]) => {
+          if (this.state.childrenReady) {
+            return;
+          }
           this.updateChildrenRatio();
           if (typeof (childrenProps.props as any).onLoad === 'function') {
             (childrenProps.props as any).onLoad(...args);
           }
         },
-        animationDelay: !this.state.childrenReady
+        ...childrenProps.type === Overdrive && {
+          animationDelay: !this.state.childrenReady
+        }
       });
       return (
         <div
