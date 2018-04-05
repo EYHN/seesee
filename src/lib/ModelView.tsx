@@ -573,9 +573,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         }
         lastTapDate = Date.now();
       } else {
-        if (this.props.prev && this.state.switchProgress < -0.5) {
+        if (this.props.prev && this.state.switchProgress < -0.3) {
           this.prev();
-        } else if (this.props.next && this.state.switchProgress > 0.5) {
+        } else if (this.props.next && this.state.switchProgress > 0.3) {
           this.next();
         } else if (this.state.fadeInCurrent < 0.5) {
           this.props.onClickBackButton(null);
