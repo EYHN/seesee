@@ -11,7 +11,7 @@ const MOUNT_NODE = document.getElementById('app');
 
 class App extends React.PureComponent {
   state = {
-    openList: '1',
+    openList: undefined as string,
     open4: false
   };
   handleClickImage: React.MouseEventHandler<HTMLImageElement> = (e) => {
