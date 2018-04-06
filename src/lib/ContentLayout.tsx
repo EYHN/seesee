@@ -77,6 +77,13 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         childrenHeight: height,
         childrenWidth: width
       });
+      if (this.props.identifier) {
+        ratioCache.set(this.props.identifier, {
+          ...ratioCache.get(this.props.identifier),
+          childrenHeight: height,
+          childrenWidth: width
+        });
+      }
     }
   }
 
@@ -173,9 +180,10 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         style: childrenStyle,
         onLoad: (...args: any[]) => {
           if (this.state.childrenReady) {
-            return;
+            this.updateSize();
+          } else {
+            this.updateChildrenRatio();
           }
-          this.updateChildrenRatio();
           if (typeof (childrenProps.props as any).onLoad === 'function') {
             (childrenProps.props as any).onLoad(...args);
           }
