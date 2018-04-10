@@ -37,7 +37,8 @@ export default class SeeseeList extends React.PureComponent<SeeseeListProps> {
         const c = React.cloneElement(child as React.ReactElement<any>, {
           ...child.props,
           parent: this,
-          open: child.props.identifier === open
+          open: child.props.identifier === open,
+          overdrive: !open
         });
         return c;
       } else {

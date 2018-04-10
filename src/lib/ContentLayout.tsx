@@ -8,9 +8,12 @@ export interface ContentLayoutProps {
   onTouchMove?: (this: ApplicationCache, ev: TouchEvent) => any;
   onTouchEnd?: (this: ApplicationCache, ev: TouchEvent) => any;
   onTouchCancel?: (this: ApplicationCache, ev: TouchEvent) => any;
+  onWheel?: (this: ApplicationCache, ev: WheelEvent) => any;
   rootref?: React.Ref<HTMLElement>;
   scaleX?: number;
   scaleY?: number;
+  containerOffsetX?: string;
+  containerOffsetY?: string;
   offsetX?: string;
   offsetY?: string;
   opacity?: number;
@@ -61,6 +64,13 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
 
   componentWillUnmount() {
     window.removeEventListener('resize', this.handleWindowResize);
+    if (this.rootElement) {
+      this.rootElement.removeEventListener('touchstart', this.props.onTouchStart);
+      this.rootElement.removeEventListener('touchend', this.props.onTouchEnd);
+      this.rootElement.removeEventListener('touchmove', this.props.onTouchMove);
+      this.rootElement.removeEventListener('touchcancel', this.props.onTouchCancel);
+      this.rootElement.removeEventListener('wheel', this.props.onWheel);
+    }
   }
 
   private handleWindowResize = (e: UIEvent) => {
@@ -117,6 +127,14 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     };
   }
 
+  private handleChildComplete = () => {
+    if (this.state.childrenReady) {
+      this.updateSize();
+    } else {
+      this.updateChildrenRatio();
+    }
+  }
+
   private handleRef: React.Ref<HTMLElement> = (el) => {
     if (!el) { return; }
     this.rootElement = el;
@@ -124,6 +142,14 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     el.addEventListener('touchend', this.props.onTouchEnd, { passive: false });
     el.addEventListener('touchmove', this.props.onTouchMove, { passive: false });
     el.addEventListener('touchcancel', this.props.onTouchCancel, { passive: false });
+    el.addEventListener('wheel', this.props.onWheel, { passive: false });
+    const child = el.firstElementChild;
+    if (child instanceof HTMLImageElement) {
+      if (child.complete === true) {
+        this.handleChildComplete();
+      }
+      child.addEventListener('onload', this.handleChildComplete);
+    }
     if (typeof this.props.rootref === 'function') {
       this.props.rootref(el);
     }
@@ -152,10 +178,17 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       scaleY = 1,
       offsetX = '0px',
       offsetY = '0px',
+      containerOffsetX = '0px',
+      containerOffsetY = '0px',
       opacity = 1,
       willChange = false
     } = this.props;
-    if (!childrenProps) { return <div style={styles.root} />; }
+    const containerStyle = {
+      ...styles.root,
+      ...styleProp,
+      transform: `translate(${containerOffsetX}, ${containerOffsetY})`
+    };
+    if (!childrenProps) { return <div style={containerStyle} />; }
     React.Children.only(childrenProps);
     if (React.isValidElement(childrenProps)) {
       const childrenStyle: React.CSSProperties = {
@@ -178,23 +211,13 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       }
       const children = React.cloneElement(childrenProps as any, {
         style: childrenStyle,
-        onLoad: (...args: any[]) => {
-          if (this.state.childrenReady) {
-            this.updateSize();
-          } else {
-            this.updateChildrenRatio();
-          }
-          if (typeof (childrenProps.props as any).onLoad === 'function') {
-            (childrenProps.props as any).onLoad(...args);
-          }
-        },
         ...childrenProps.type === Overdrive && {
           animationDelay: !this.state.childrenReady
         }
       });
       return (
         <div
-          style={{ ...styles.root, ...styleProp }}
+          style={containerStyle}
           ref={this.handleRef}
         >
           {children}

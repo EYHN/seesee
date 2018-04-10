@@ -50,6 +50,7 @@ export interface ModelViewProps {
 export default class ModelView extends React.PureComponent<ModelViewProps> {
   animationRequest: number;
   contentAnimationRequest: number;
+  contentAnimationEndHandler: () => any;
   contentLayoutElement: HTMLElement;
   touchEventManager: TouchEventManager = new TouchEventManager();
   state = {
@@ -78,10 +79,15 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         this.onClose();
       }
     }
+    window.addEventListener('keydown', this.handleKeyboard);
+    window.addEventListener('keyup', this.handleKeyboard);
   }
 
   componentWillUnmount() {
     cancelAnimationFrame(this.animationRequest);
+
+    window.removeEventListener('keydown', this.handleKeyboard);
+    window.removeEventListener('keyup', this.handleKeyboard);
   }
 
   componentWillReceiveProps(nextProps: { children: React.ReactNode } & ModelViewProps) {
@@ -95,6 +101,17 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     if (this.state.hasShow && nextProps.children !== this.props.children) {
       this.resetTransform();
     }
+  }
+
+  controlDistanceOfSide(a: number, b: number, offset: number) {
+    if (a > 0 && b > 0 || a + b > 0) {
+      offset = 0;
+    } else if (a > 0 && b <= 0) {
+      offset -= a;
+    } else if (b > 0 && a <= 0) {
+      offset += b;
+    }
+    return offset;
   }
 
   onOpen() {
@@ -112,7 +129,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     const childrenElement = this.contentLayoutElement.firstElementChild;
     const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
     const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
-    const { width, height } = childrenElement.getBoundingClientRect();
+    let { width, height } = childrenElement.getBoundingClientRect();
+    width /= this.state.scaleX;
+    height /= this.state.scaleY;
     x = Math.max(0, Math.min(width, x)) - width / 2;
     y = Math.max(0, Math.min(height, y)) - height / 2;
     const maxOffsetX = width * scale / 2 - clientWidth / 2;
@@ -293,25 +312,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       opacity: beginOpacity,
       switchProgress: beginSwitchProgress } = this.state;
     let targetOffsetX = 0, targetOffsetY = 0, targetScaleX = beginScaleX, targetScaleY = beginScaleY;
-    if (left > 0 && right > 0 || left + right > 0) {
-      targetOffsetX = 0;
-    } else if (left > 0 && right <= 0) {
-      targetOffsetX = beginOffsetX - left;
-    } else if (right > 0 && left <= 0) {
-      targetOffsetX = beginOffsetX + right;
-    } else {
-      targetOffsetX = beginOffsetX;
-    }
+    targetOffsetX = this.controlDistanceOfSide(left, right, beginOffsetX);
 
-    if (top > 0 && bottom > 0 || top + bottom > 0) {
-      targetOffsetY = 0;
-    } else if (top > 0 && bottom <= 0) {
-      targetOffsetY = beginOffsetY - top;
-    } else if (bottom > 0 && top <= 0) {
-      targetOffsetY = beginOffsetY + bottom;
-    } else {
-      targetOffsetY = beginOffsetY;
-    }
+    targetOffsetY = this.controlDistanceOfSide(top, bottom, beginOffsetY);
 
     if (beginScaleX < beginScaleY) {
       if (beginScaleX < 1) {
@@ -364,6 +367,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     const duration = 150;
 
     const update = () => {
+      if (!this.props.next) { return; }
       const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
         ...this.state,
@@ -379,12 +383,13 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         this.contentAnimationRequest = requestAnimationFrame(update);
       } else {
         this.endAnimationFrame();
-        if (typeof this.props.onNext === 'function') {
-          this.props.onNext(this.props.next);
-        }
       }
     };
-    this.startAnimationFrame(update);
+    this.startAnimationFrame(update, () => {
+      if (typeof this.props.onNext === 'function') {
+        this.props.onNext(this.props.next);
+      }
+    });
   }
 
   public prev() {
@@ -404,6 +409,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     const duration = 150;
 
     const update = () => {
+      if (!this.props.prev) { return; }
       const current = Math.min((Date.now() - startTime) / duration, 1);
       this.setState({
         ...this.state,
@@ -419,25 +425,124 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         this.contentAnimationRequest = requestAnimationFrame(update);
       } else {
         this.endAnimationFrame();
-        if (typeof this.props.onPrev === 'function') {
-          this.props.onPrev(this.props.prev);
-        }
       }
     };
-    this.startAnimationFrame(update);
+    this.startAnimationFrame(update, () => {
+      if (typeof this.props.onPrev === 'function') {
+        this.props.onPrev(this.props.prev);
+      }
+    });
   }
 
-  private startAnimationFrame = (c: FrameRequestCallback) => {
+  public move = (x: number, y: number, keepInFrame: boolean = false) => {
+    let offsetX = this.state.offsetX + x;
+    let offsetY = this.state.offsetY + y;
+    if (keepInFrame) {
+      const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
+      const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
+      const childrenElement = this.contentLayoutElement.firstElementChild;
+      const clientRect = childrenElement.getBoundingClientRect();
+      const left = clientRect.left + x,
+        right = clientWidth - clientRect.right - x,
+        bottom = clientHeight - clientRect.bottom - y,
+        top = clientRect.top + y;
+
+      offsetX = this.controlDistanceOfSide(left, right, offsetX);
+      offsetY = this.controlDistanceOfSide(top, bottom, offsetY);
+    }
+    this.startAnimationFrame(() => {
+      this.setState({
+        ...this.state,
+        offsetX: offsetX,
+        offsetY: offsetY,
+        fadeInCurrent: 1,
+        opacity: 1,
+        switchProgress: 0
+      });
+      this.endAnimationFrame();
+    });
+  }
+
+  public zoom = (
+    scalingRatio: number,
+    centerX: number,
+    centerY: number,
+    min: number = 0,
+    moveX: number = 0,
+    moveY: number = 0,
+    keepInFrame: boolean = false
+  ) => {
+    const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
+    const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
+    // const maxOffsetX = width * scalingRatio / 2 - clientWidth / 2;
+    // const maxOffsetY = height * scalingRatio / 2 - clientHeight / 2;
+    const scaleX = Math.max(min, this.state.scaleX * scalingRatio);
+    const scaleY = Math.max(min, this.state.scaleY * scalingRatio);
+    const centerOffsetX = -(centerX - (clientWidth / 2)) * (scaleX - 1 * this.state.scaleX);
+    const centerOffsetY = -(centerY - (clientHeight / 2)) * (scaleY - 1 * this.state.scaleX);
+    let offsetX = this.state.offsetX + moveX + centerOffsetX;
+    let offsetY = this.state.offsetY + moveY + centerOffsetY;
+
+    if (keepInFrame) {
+      const childrenElement = this.contentLayoutElement.firstElementChild;
+      let { width, height } = childrenElement.getBoundingClientRect();
+      height /= this.state.scaleY;
+      width /= this.state.scaleX;
+      height *= scaleY;
+      width *= scaleX;
+      const left = clientWidth / 2 - width / 2 + offsetX;
+      const right = clientWidth - (left + width);
+      const top = clientHeight / 2 - height / 2 + offsetY;
+      const bottom = clientHeight - (top + height);
+
+      offsetX = this.controlDistanceOfSide(left, right, offsetX);
+      offsetY = this.controlDistanceOfSide(top, bottom, offsetY);
+    }
+
+    this.startAnimationFrame(() => {
+      this.setState({
+        ...this.state,
+        scaleX: scaleX,
+        scaleY: scaleY,
+        offsetX: offsetX,
+        offsetY: offsetY,
+        fadeInCurrent: 1,
+        opacity: 1,
+        switchProgress: 0
+      });
+      this.endAnimationFrame();
+    });
+  }
+
+  private startAnimationFrame = (c: FrameRequestCallback, end?: () => any) => {
     if (typeof this.contentAnimationRequest !== 'undefined') {
-      cancelAnimationFrame(this.contentAnimationRequest);
+      this.endAnimationFrame();
     }
     this.contentAnimationRequest = requestAnimationFrame(c);
+    this.contentAnimationEndHandler = end;
     this.willChange();
   }
 
+  /**
+   * @function
+   */
+  // tslint:disable-next-line:member-ordering
+  private willNotChange = debounce(() => {
+    if (this.state.willChange) {
+      this.setState({
+        ...this.state,
+        willChange: false
+      });
+    }
+  }, 100);
   private endAnimationFrame = () => {
+    window.cancelAnimationFrame(this.contentAnimationRequest);
     this.contentAnimationRequest = undefined;
     this.willNotChange();
+    if (typeof this.contentAnimationEndHandler === 'function') {
+      this.contentAnimationEndHandler();
+      this.contentAnimationEndHandler = undefined;
+    }
   }
 
   private willChange = () => {
@@ -453,14 +558,29 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
    * @function
    */
   // tslint:disable-next-line:member-ordering
-  private willNotChange = debounce(() => {
-    if (this.state.willChange) {
-      this.setState({
-        ...this.state,
-        willChange: false
-      });
+  private debouncedStayWithinRange = debounce(this.stayWithinRange, 100);
+
+  private handleWheel = (e: WheelEvent) => {
+    if (e.ctrlKey && e.deltaX === 0) {
+      const scale = e.deltaY / -50 + 1;
+      this.zoom(scale, e.clientX, e.clientY, 1, 0, 0, true);
+    } else if (!e.ctrlKey && e.deltaX !== 0 || e.deltaY !== 0) {
+      this.move(e.deltaX * -1, e.deltaY * -1, true);
     }
-  }, 100);
+    this.debouncedStayWithinRange();
+    e.preventDefault();
+  }
+
+  private handleKeyboard = (e: KeyboardEvent) => {
+    if (event.defaultPrevented || !this.props.children) {
+      return; // Should do nothing if the default action has been cancelled
+    }
+    if (e.type === 'keydown' && e.keyCode === 37) {
+      this.prev();
+    } else if (e.type === 'keydown' && e.keyCode === 39) {
+      this.next();
+    }
+  }
 
   private handleTouch = async () => {
     let lastTapDate = 0;
@@ -515,45 +635,14 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         // If only one finger touches
         if (getTotalDistanceMoved(changedTouches) > 5) {
           const { x, y } = getMoveDistance(changedTouches);
-          this.startAnimationFrame(() => {
-            this.setState({
-              ...this.state,
-              offsetX: this.state.offsetX + x,
-              offsetY: this.state.offsetY + y,
-              fadeInCurrent: 1,
-              opacity: 1,
-              switchProgress: 0
-            });
-            this.endAnimationFrame();
-          });
+          this.move(x, y);
         }
       } else if (event.type === 'touchmove' && isMultipleFingers(touches)) {
         // If there are multiple fingers touching.
         if (getTotalDistanceMoved(changedTouches) > 5) {
-          const clientHeight = this.contentLayoutElement.getBoundingClientRect().height;
-          const clientWidth = this.contentLayoutElement.getBoundingClientRect().width;
-
-          // Fingers scaling.
-          const scalingRatio = getScaling(touches);
-          const { x: centerX, y: centerY } = getTouchesCenter(getTouches(touches));
-
-          const centerOffsetX = -(centerX - (clientWidth / 2)) * (scalingRatio - 1) * this.state.scaleX;
-          const centerOffsetY = -(centerY - (clientHeight / 2)) * (scalingRatio - 1) * this.state.scaleY;
-
-          const { x, y } = getMoveDistance(changedTouches);
-          this.startAnimationFrame(() => {
-            this.setState({
-              ...this.state,
-              scaleX: this.state.scaleX * scalingRatio,
-              scaleY: this.state.scaleY * scalingRatio,
-              offsetX: this.state.offsetX + x + centerOffsetX,
-              offsetY: this.state.offsetY + y + centerOffsetY,
-              fadeInCurrent: 1,
-              opacity: 1,
-              switchProgress: 0
-            });
-            this.endAnimationFrame();
-          });
+          const { x, y } = getTouchesCenter(getTouches(touches));
+          const { x: moveX, y: moveY } = getMoveDistance(changedTouches);
+          this.zoom(getScaling(touches), x, y, 0, moveX, moveY);
         }
       } else if (isSingleTap(touches, changedTouches)) {
         if (Date.now() - lastTapDate < 300) {
@@ -614,6 +703,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         onTouchEnd={this.touchEventManager.handleTouchEvent}
         onTouchMove={this.touchEventManager.handleTouchEvent}
         onTouchStart={this.touchEventManager.handleTouchEvent}
+        onWheel={this.handleWheel}
         rootref={this.handleContentRootRef}
         scaleX={this.state.scaleX}
         scaleY={this.state.scaleY}
@@ -622,6 +712,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         willChange={this.state.willChange}
         opacity={this.state.opacity}
         identifier={identifier}
+        key={identifier}
       >
         {children}
       </ContentLayout>
@@ -634,6 +725,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         willChange={this.state.switchProgress > 0}
         opacity={this.state.switchProgress}
         identifier={nextIdentifier}
+        key={identifier}
       >
         {nextProp}
       </ContentLayout>
@@ -641,10 +733,11 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     const prev = prevProp && (
       <ContentLayout
         enable
-        offsetX={(-1 - this.state.switchProgress) * 100 + '%'}
+        containerOffsetX={(-1 - this.state.switchProgress) * 100 + '%'}
         opacity={this.state.switchProgress < 0 ? 1 : 0}
         willChange={this.state.switchProgress < 0}
         identifier={prevIdentifier}
+        key={identifier}
       >
         {prevProp}
       </ContentLayout>

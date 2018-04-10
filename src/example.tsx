@@ -98,6 +98,38 @@ class App extends React.PureComponent {
               width='50px'
             />
           </Seesee>
+          <br />
+          <Seesee title={'K-on'} identifier={'4'}>
+            <img
+              style={{ background: '#000' }}
+              src={exampleImage2}
+              width='200px'
+            />
+          </Seesee>
+          <br />
+          <Seesee title={'K-on'} identifier={'5'}>
+            <img
+              style={{ background: '#000' }}
+              src={exampleImage2}
+              width='200px'
+            />
+          </Seesee>
+          <br />
+          <Seesee title={'K-on'} identifier={'6'}>
+            <img
+              style={{ background: '#000' }}
+              src={exampleImage2}
+              width='200px'
+            />
+          </Seesee>
+          <br />
+          <Seesee title={'K-on'} identifier={'7'}>
+            <img
+              style={{ background: '#000' }}
+              src={exampleImage2}
+              width='200px'
+            />
+          </Seesee>
         </SeeseeList>
       </>
     );

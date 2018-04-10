@@ -11,6 +11,7 @@ export interface SeeseeProps {
   title?: string;
   parent?: SeeseeList;
   identifier?: string;
+  overdrive?: boolean;
 }
 
 export default class Seesee extends React.PureComponent<SeeseeProps> {
@@ -32,7 +33,8 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
       title,
       onExit,
       parent,
-      identifier
+      identifier,
+      overdrive = true
     } = this.props;
     const onlyChild = React.Children.only(children);
     if (!React.isValidElement(onlyChild)) {
@@ -61,7 +63,7 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
     return (
       <>
         {typeof parent === 'undefined' && modelView}
-        {!open ? overdrived : React.cloneElement(onlyChild as any, { style: { opacity: 0 } })}
+        {overdrive && !open ? overdrived : React.cloneElement(onlyChild as any, { style: { opacity: 0 } })}
         {typeof parent === 'undefined' && open && <style>{'body {overflow: hidden}'}</style>}
       </>
     );
