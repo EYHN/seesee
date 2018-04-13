@@ -9,6 +9,12 @@ export interface ContentLayoutProps {
   onTouchEnd?: (this: ApplicationCache, ev: TouchEvent) => any;
   onTouchCancel?: (this: ApplicationCache, ev: TouchEvent) => any;
   onWheel?: (this: ApplicationCache, ev: WheelEvent) => any;
+  onMouseDown?: (this: ApplicationCache, ev: MouseEvent) => any;
+  onMouseMove?: (this: ApplicationCache, ev: MouseEvent) => any;
+  onMouseUp?: (this: ApplicationCache, ev: MouseEvent) => any;
+  onMouseOver?: (this: ApplicationCache, ev: MouseEvent) => any;
+  onMouseEnter?: (this: ApplicationCache, ev: MouseEvent) => any;
+  onMouseLeave?: (this: ApplicationCache, ev: MouseEvent) => any;
   rootref?: React.Ref<HTMLElement>;
   scaleX?: number;
   scaleY?: number;
@@ -143,6 +149,12 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     el.addEventListener('touchmove', this.props.onTouchMove, { passive: false });
     el.addEventListener('touchcancel', this.props.onTouchCancel, { passive: false });
     el.addEventListener('wheel', this.props.onWheel, { passive: false });
+    el.addEventListener('mousedown', this.props.onMouseDown);
+    el.addEventListener('mouseenter', this.props.onMouseEnter);
+    el.addEventListener('mouseleave', this.props.onMouseLeave);
+    el.addEventListener('mousemove', this.props.onMouseMove);
+    el.addEventListener('mouseover', this.props.onMouseOver);
+    el.addEventListener('mouseup', this.props.onMouseUp);
     const child = el.firstElementChild;
     if (child instanceof HTMLImageElement) {
       if (child.complete === true) {

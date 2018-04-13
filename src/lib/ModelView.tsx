@@ -48,11 +48,6 @@ export interface ModelViewProps {
  * @class
  */
 export default class ModelView extends React.PureComponent<ModelViewProps> {
-  animationRequest: number;
-  contentAnimationRequest: number;
-  contentAnimationEndHandler: () => any;
-  contentLayoutElement: HTMLElement;
-  touchEventManager: TouchEventManager = new TouchEventManager();
   state = {
     fadeInCurrent: !!this.props.children ? 1 : 0,
     hasShow: !!this.props.children,
@@ -65,6 +60,12 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     switchProgress: 0,
     willChange: false
   };
+  private animationRequest: number;
+  private contentAnimationRequest: number;
+  private contentAnimationEndHandler: () => any;
+  private contentLayoutElement: HTMLElement;
+  private lastMouseEvent: MouseEvent;
+  private touchEventManager: TouchEventManager = new TouchEventManager();
 
   constructor(props: ModelViewProps) {
     super(props);
@@ -571,6 +572,21 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
     e.preventDefault();
   }
 
+  private handleMouse = (e: MouseEvent) => {
+    if (e.buttons === 1) {
+      if (this.lastMouseEvent) {
+        this.move(e.clientX - this.lastMouseEvent.clientX, e.clientY - this.lastMouseEvent.clientY);
+      }
+      this.lastMouseEvent = e;
+      e.preventDefault();
+    } else {
+      this.lastMouseEvent = null;
+    }
+    if (e.type === 'mouseup') {
+      this.stayWithinRange();
+    }
+  }
+
   private handleKeyboard = (e: KeyboardEvent) => {
     if (event.defaultPrevented || !this.props.children) {
       return; // Should do nothing if the default action has been cancelled
@@ -674,6 +690,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   }
 
   private handleContentRootRef = (el: HTMLElement) => this.contentLayoutElement = el;
+
   // tslint:disable-next-line:member-ordering
   public render() {
     const {
@@ -704,6 +721,12 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         onTouchMove={this.touchEventManager.handleTouchEvent}
         onTouchStart={this.touchEventManager.handleTouchEvent}
         onWheel={this.handleWheel}
+        onMouseDown={this.handleMouse}
+        onMouseMove={this.handleMouse}
+        onMouseUp={this.handleMouse}
+        onMouseOver={this.handleMouse}
+        onMouseEnter={this.handleMouse}
+        onMouseLeave={this.handleMouse}
         rootref={this.handleContentRootRef}
         scaleX={this.state.scaleX}
         scaleY={this.state.scaleY}
