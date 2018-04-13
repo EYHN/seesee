@@ -626,7 +626,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
               });
               this.endAnimationFrame();
             });
-          } else {
+          } else if (this.state.scaleX === 1 && this.state.scaleY === 1) {
             const { x, y } = getMoveDistance(changedTouches);
             const offsetX = this.state.offsetX + x;
             const offsetY = this.state.offsetY + y;
@@ -675,9 +675,9 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
         }
         lastTapDate = Date.now();
       } else {
-        if (this.props.prev && this.state.switchProgress < -0.2) {
+        if (this.props.prev && this.state.switchProgress < -0.05) {
           this.prev();
-        } else if (this.props.next && this.state.switchProgress > 0.2) {
+        } else if (this.props.next && this.state.switchProgress > 0.05) {
           this.next();
         } else if (this.state.fadeInCurrent < 0.5) {
           this.props.onClickBackButton(null);
