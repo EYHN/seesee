@@ -29,8 +29,6 @@ export interface ContentLayoutProps {
 
 const ratioCache: Map<string, {
   childrenRatio: number;
-  childrenWidth: string;
-  childrenHeight: string;
 }> = new Map();
 
 export default class ContentLayout extends React.PureComponent<ContentLayoutProps> {
@@ -47,8 +45,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
   constructor(props: ContentLayoutProps) {
     super(props);
     this.state = {
-      ...this.state,
-      ...this.findCache(props.identifier)
+      ...this.state
     };
   }
 
@@ -58,8 +55,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         childrenReady: false,
         childrenRatio: 1,
         childrenWidth: '',
-        childrenHeight: '',
-        ...this.findCache(nextProps.identifier)
+        childrenHeight: ''
       });
     }
   }
@@ -95,9 +91,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       });
       if (this.props.identifier) {
         ratioCache.set(this.props.identifier, {
-          ...ratioCache.get(this.props.identifier),
-          childrenHeight: height,
-          childrenWidth: width
+          ...ratioCache.get(this.props.identifier)
         });
       }
     }
@@ -105,8 +99,10 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
 
   private updateChildrenRatio() {
     if (!this.rootElement) { return; }
-    const rect = this.rootElement.firstElementChild.getBoundingClientRect();
-    const ratio = rect.width / rect.height;
+    const children = this.rootElement.firstElementChild;
+    let ratio;
+    const rect = children.getBoundingClientRect();
+    ratio = rect.width / rect.height;
     const { height, width } = this.getChildrenSize(ratio);
     this.setState({
       ...this.state,
@@ -117,9 +113,7 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     });
     if (this.props.identifier) {
       ratioCache.set(this.props.identifier, {
-        childrenRatio: ratio,
-        childrenHeight: height,
-        childrenWidth: width
+        childrenRatio: ratio
       });
     }
   }
@@ -127,9 +121,12 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
   private findCache(identifier: string) {
     const style = ratioCache.get(identifier);
     if (typeof style !== 'object') { return; }
+    const { height, width } = this.getChildrenSize(style.childrenRatio);
     return {
       childrenReady: true,
-      ...style
+      ...style,
+      childrenHeight: height,
+      childrenWidth: width
     };
   }
 
@@ -156,7 +153,16 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     el.addEventListener('mouseover', this.props.onMouseOver);
     el.addEventListener('mouseup', this.props.onMouseUp);
     const child = el.firstElementChild;
-    if (child instanceof HTMLImageElement) {
+    let cache;
+    if (this.props.identifier) {
+      cache = this.findCache(this.props.identifier);
+    }
+    if (cache) {
+      this.setState({
+        ...this.state,
+        ...cache
+      });
+    } else if (child instanceof HTMLImageElement) {
       if (child.complete === true) {
         this.handleChildComplete();
       }
