@@ -43,11 +43,11 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
 
     this.children = onlyChild;
 
-    const overdrived = (
+    const overdrived = overdrive ? (
       <Overdrive id={identifier} duration={300}>
         {onlyChild}
       </Overdrive>
-    );
+    ) : onlyChild;
 
     const modelView = (
       <ModelView
@@ -63,7 +63,7 @@ export default class Seesee extends React.PureComponent<SeeseeProps> {
     return (
       <>
         {typeof parent === 'undefined' && modelView}
-        {overdrive && !open ? overdrived : React.cloneElement(onlyChild as any, { style: { opacity: 0 } })}
+        {!open ? overdrived : React.cloneElement(onlyChild as any, { style: { opacity: 0 } })}
         {typeof parent === 'undefined' && open && <style>{'body {overflow: hidden}'}</style>}
       </>
     );
