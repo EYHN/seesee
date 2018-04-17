@@ -30,6 +30,7 @@ export interface OverdrivePosition {
   height: number;
   margin: string;
   padding: string;
+  boxSizing: string;
   borderRadius: string;
   position: 'absolute';
 }
@@ -91,7 +92,7 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
           ref={ref}
           style={style}
         >
-        {children}
+          {children}
         </span>
       );
     };
@@ -216,6 +217,7 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
       margin: computedStyle.margin,
       padding: computedStyle.padding,
       borderRadius: computedStyle.borderRadius,
+      boxSizing: computedStyle.boxSizing,
       position: 'absolute'
     };
   }
@@ -224,23 +226,50 @@ export default class Overdrive extends React.PureComponent<OverdriveProps> {
     const { id, duration = 200, animationDelay, style = {}, children, ...rest } = this.props;
     const onlyChild = React.Children.only(children);
 
+    const {
+      transform,
+      transformOrigin,
+      transformOriginZ,
+      transformStyle,
+      opacity,
+      willChange,
+      ...otherStyle
+    } = style;
+
     const newStyle: React.CSSProperties = {
       ...onlyChild.props.style,
-      ...style
+      ...otherStyle
+    };
+
+    const rootStyle: React.CSSProperties = {
+      display: 'inline-block',
+      lineHeight: '0px',
+      transform,
+      transformOrigin,
+      transformOriginZ,
+      transformStyle,
+      opacity,
+      willChange
     };
 
     if (this.state.loading) {
-      newStyle.willChange = 'opacity';
-      newStyle.opacity = 0;
+      rootStyle.willChange = 'opacity';
+      rootStyle.opacity = 0;
     }
 
-    return React.cloneElement(
+    const clonedChildren = React.cloneElement(
       onlyChild,
       {
         ref: (c: HTMLElement) => (this.element = c as HTMLElement),
         style: newStyle,
         ...rest
       }
+    );
+
+    return (
+      <span style={rootStyle}>
+        {clonedChildren}
+      </span>
     );
   }
 }

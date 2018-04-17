@@ -34,6 +34,8 @@ const ratioCache: Map<string, {
 export default class ContentLayout extends React.PureComponent<ContentLayoutProps> {
   prevTouchList: TouchList;
   rootElement: HTMLElement;
+  childrenComplete: boolean;
+  onChildrenComplete: () => any;
 
   state = {
     childrenReady: false,
@@ -162,11 +164,13 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         ...this.state,
         ...cache
       });
-    } else if (child instanceof HTMLImageElement) {
-      if (child.complete === true) {
+    } else {
+      if (
+        !(child instanceof HTMLImageElement) ||
+        (this.childrenComplete === true && (child as HTMLImageElement).complete === true)) {
         this.handleChildComplete();
       }
-      child.addEventListener('onload', this.handleChildComplete);
+      this.onChildrenComplete = this.handleChildComplete;
     }
     if (typeof this.props.rootref === 'function') {
       this.props.rootref(el);
@@ -179,11 +183,11 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
     const clientRatio = clientWidth / clientHeight;
     const childrenRatio = ratio;
     return clientRatio > childrenRatio ? {
-      height: '100vh',
-      width: 'auto'
+      height: clientHeight,
+      width: clientHeight * ratio
     } : {
-        width: '100vw',
-        height: 'auto'
+        width: clientWidth,
+        height: clientWidth / ratio
       };
   }
 
@@ -216,7 +220,6 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
       if (this.state.childrenReady) {
         childrenStyle.transform = `translate(${offsetX}, ${offsetY})` +
           `scale(${scaleX}, ${scaleY}) `;
-        childrenStyle.maxWidth = '100%';
       }
       if (this.state.childrenWidth && this.state.childrenHeight) {
         childrenStyle.width = this.state.childrenWidth;
@@ -231,6 +234,12 @@ export default class ContentLayout extends React.PureComponent<ContentLayoutProp
         style: childrenStyle,
         ...childrenProps.type === Overdrive && {
           animationDelay: !this.state.childrenReady
+        },
+        onLoad: () => {
+          this.childrenComplete = true;
+          if (typeof this.onChildrenComplete === 'function') {
+            this.onChildrenComplete();
+          }
         }
       });
       return (
