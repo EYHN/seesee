@@ -66,6 +66,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   private contentLayoutElement: HTMLElement;
   private lastMouseEvent: MouseEvent;
   private touchEventManager: TouchEventManager = new TouchEventManager();
+  private lockSwitch = false;
 
   constructor(props: ModelViewProps) {
     super(props);
@@ -351,7 +352,7 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
   }
 
   public next() {
-    if (!this.props.next) { return; }
+    if (!this.props.next || this.lockSwitch) { return; }
     const {
       offsetX: beginOffsetX,
       offsetY: beginOffsetY,
@@ -366,6 +367,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
 
     // The animation duration milliseconds.
     const duration = 150;
+
+    this.lockSwitch = true;
 
     const update = () => {
       if (!this.props.next) { return; }
@@ -383,18 +386,19 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
       } else {
+        if (typeof this.props.onNext === 'function') {
+          this.props.onNext(this.props.next);
+        }
         this.endAnimationFrame();
       }
     };
     this.startAnimationFrame(update, () => {
-      if (typeof this.props.onNext === 'function') {
-        this.props.onNext(this.props.next);
-      }
+      this.lockSwitch = false;
     });
   }
 
   public prev() {
-    if (!this.props.prev) { return; }
+    if (!this.props.prev || this.lockSwitch) { return; }
     const {
       offsetX: beginOffsetX,
       offsetY: beginOffsetY,
@@ -408,6 +412,8 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
 
     // The animation duration milliseconds.
     const duration = 150;
+
+    this.lockSwitch = true;
 
     const update = () => {
       if (!this.props.prev) { return; }
@@ -425,13 +431,15 @@ export default class ModelView extends React.PureComponent<ModelViewProps> {
       if (current !== 1) {
         this.contentAnimationRequest = requestAnimationFrame(update);
       } else {
+        if (typeof this.props.onPrev === 'function') {
+          this.props.onPrev(this.props.prev);
+        }
         this.endAnimationFrame();
       }
     };
+
     this.startAnimationFrame(update, () => {
-      if (typeof this.props.onPrev === 'function') {
-        this.props.onPrev(this.props.prev);
-      }
+      this.lockSwitch = false;
     });
   }
 
